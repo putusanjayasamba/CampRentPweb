@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 export default function SplashScreen() {
@@ -44,40 +45,39 @@ export default function SplashScreen() {
   return (
     <div
       onClick={handleSkip}
-      className={`fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#24523b] p-8 text-white transition-opacity duration-500 cursor-pointer select-none ${
+      className={`fixed inset-0 z-50 flex flex-col items-center justify-between bg-[#f7f5ef] p-8 text-[#203d34] transition-opacity duration-500 cursor-pointer select-none ${
         isFadingOut ? "opacity-0 scale-105" : "opacity-100 scale-100"
       }`}
     >
       {/* Top spacing */}
       <div className="w-full flex justify-end">
-        <span className="text-xs text-white/50 tracking-wider">
+        <span className="text-xs text-[#203d34]/50 tracking-wider">
           Ketuk untuk lewati &rarr;
         </span>
       </div>
 
-      {/* Center Logo & Name */}
+      {/* Center Logo */}
       <div className="flex flex-col items-center justify-center text-center">
-        {/* CampRent Logo */}
-        <div className="text-5xl sm:text-7xl font-extrabold tracking-tight transition-all duration-700 transform animate-in fade-in zoom-in-95">
-          Camp<span className="text-[#f97316]">Rent</span>
-        </div>
-
-        {/* Minimal Sub-tag */}
-        <p className="mt-3 text-sm sm:text-base text-emerald-100/70 font-medium tracking-wide">
-          Sewa Alat Camping Tanpa Ribet
-        </p>
+        <Image
+          src="/camp-rent-logo.png"
+          alt="CampRent — Gear up, adventure out. Rental peralatan camping."
+          width={990}
+          height={471}
+          priority
+          className="h-auto w-[min(82vw,700px)] animate-in fade-in zoom-in-95"
+        />
 
         {/* Minimal Progress Bar */}
-        <div className="w-48 sm:w-64 h-1.5 bg-white/20 rounded-full mt-10 overflow-hidden">
+        <div className="w-48 sm:w-64 h-1.5 bg-[#203d34]/15 rounded-full mt-5 overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-orange-400 to-[#f97316] rounded-full transition-all duration-100 ease-out"
+            className="h-full bg-gradient-to-r from-[#c9a66b] to-[#a77d42] rounded-full transition-all duration-100 ease-out"
             style={{ width: `${progress}%` }}
           />
         </div>
       </div>
 
       {/* Bottom attribution */}
-      <div className="text-xs text-white/40 tracking-wider">
+      <div className="text-xs text-[#203d34]/50 tracking-wider">
         Universitas Primakara
       </div>
     </div>
