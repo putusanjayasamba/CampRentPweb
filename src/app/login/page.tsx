@@ -107,9 +107,11 @@ export default function LoginPage() {
 
     setTimeout(() => {
       if (role === "customer") {
-        router.push("/customer");
+        router.push("/customer/katalog");
+      } else if (role === "staff") {
+        router.push("/staff/pengambilan-pengembalian");
       } else {
-        router.push(`/dashboard?role=${role}`);
+        router.push("/admin");
       }
     }, 1200);
   };
