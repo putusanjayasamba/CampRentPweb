@@ -1,32 +1,108 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import {
-  Package,
-  Plus,
-  Search,
-  Edit2,
-  Trash2,
-  X,
-  Check,
-  AlertTriangle,
-} from "lucide-react";
+import { Search, X, Plus } from "lucide-react";
 import { INITIAL_STOCK_ITEMS, EquipmentStockItem } from "@/data/adminData";
+
+function getStatusBadge(status: EquipmentStockItem["status"]) {
+  switch (status) {
+    case "Tersedia":
+      return "bg-[#e6f4ea] text-[#1e7e34]";
+    case "Menipis":
+      return "bg-[#fef3e9] text-[#c2410c]";
+    case "Habis":
+      return "bg-[#fee2e2] text-[#b91c1c]";
+    default:
+      return "bg-gray-100 text-gray-600";
+  }
+}
+
+function ItemIcon({
+  iconType,
+  category,
+}: {
+  iconType?: EquipmentStockItem["iconType"];
+  category: string;
+}) {
+  if (category === "Tenda" || iconType === "tent") {
+    return (
+      <div className="w-8 h-8 rounded-lg bg-[#e8f5e9] flex items-center justify-center shrink-0">
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none">
+          <polygon points="12,4 4,19 20,19" fill="#e07a2c" />
+          <polygon points="12,4 8,19 16,19" fill="#fde047" opacity="0.9" />
+          <line x1="12" y1="4" x2="12" y2="19" stroke="#b45309" strokeWidth="1" />
+        </svg>
+      </div>
+    );
+  }
+
+  if (category === "Sleeping Gear" || iconType === "sleeping" || iconType === "matras") {
+    if (iconType === "matras") {
+      return (
+        <div className="w-8 h-8 rounded-lg bg-[#fef9c3] flex items-center justify-center shrink-0">
+          <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none">
+            <rect x="5" y="6" width="14" height="12" rx="3" fill="#ca8a04" />
+            <line x1="9" y1="6" x2="9" y2="18" stroke="#fef08a" strokeWidth="1.5" />
+          </svg>
+        </div>
+      );
+    }
+    return (
+      <div className="w-8 h-8 rounded-lg bg-[#e0f2fe] flex items-center justify-center shrink-0">
+        <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none">
+          <rect x="4" y="6" width="16" height="12" rx="3" fill="#0284c7" />
+          <rect x="6" y="8" width="8" height="8" rx="2" fill="#bae6fd" />
+        </svg>
+      </div>
+    );
+  }
+
+  if (category === "Cooking" || iconType === "stove") {
+    return (
+      <div className="w-8 h-8 rounded-lg bg-[#ffedd5] flex items-center justify-center shrink-0">
+        <span className="text-sm">🔥</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-8 h-8 rounded-lg bg-[#e2e8f0] flex items-center justify-center shrink-0">
+      <svg
+        viewBox="0 0 24 24"
+        className="w-4 h-4 text-gray-700"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
+        <path d="M18 6l-4 4-2-2 4-4a2 2 0 112.83 2.83z" fill="#64748b" />
+        <path d="M14 10l-8 8a2 2 0 002.83 2.83l8-8" fill="#94a3b8" />
+      </svg>
+    </div>
+  );
+}
 
 export default function AdminStokPage() {
   const [stockItems, setStockItems] = useState<EquipmentStockItem[]>(INITIAL_STOCK_ITEMS);
   const [selectedCategory, setSelectedCategory] = useState<string>("Semua");
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // Form states for adding new equipment
-  const [name, setName] = useState("");
-  const [category, setCategory] = useState<EquipmentStockItem["category"]>("Tenda");
-  const [stock, setStock] = useState<number>(5);
-  const [pricePerDay, setPricePerDay] = useState<number>(50000);
-  const [totalValue, setTotalValue] = useState<number>(500000);
-  const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
+  // Modal form states (Tambah / Edit)
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<EquipmentStockItem | null>(null);
+
+  // Form input fields
+  const [formName, setFormName] = useState("");
+  const [formCategory, setFormCategory] = useState<EquipmentStockItem["category"]>("Tenda");
+  const [formStock, setFormStock] = useState<number | string>(4);
+  const [formPrice, setFormPrice] = useState<number | string>(95000);
+  const [formValue, setFormValue] = useState<number | string>(850000);
+  const [formDescription, setFormDescription] = useState("");
+  const [formTags, setFormTags] = useState<string[]>(["family", "waterproof"]);
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagInput, setNewTagInput] = useState("");
+
+  // Modal delete states
+  const [itemToDelete, setItemToDelete] = useState<EquipmentStockItem | null>(null);
 
   const categories = ["Semua", "Tenda", "Sleeping Gear", "Cooking", "Lighting"];
 
@@ -36,177 +112,252 @@ export default function AdminStokPage() {
         selectedCategory === "Semua" || item.category === selectedCategory;
       const matchSearch =
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.category.toLowerCase().includes(searchQuery.toLowerCase());
+        item.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.idDoc.toLowerCase().includes(searchQuery.toLowerCase());
       return matchCat && matchSearch;
     });
   }, [stockItems, selectedCategory, searchQuery]);
 
-  const handleAddEquipment = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newItem: EquipmentStockItem = {
-      idDoc: `6500a1b2c3d4...${Math.floor(1000 + Math.random() * 9000)}`,
-      name,
-      category,
-      stock: Number(stock),
-      pricePerDay: Number(pricePerDay),
-      totalValue: Number(totalValue),
-      description,
-      tags: tags
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean),
-      status: stock > 5 ? "Tersedia" : stock > 0 ? "Menipis" : "Habis",
-      iconType:
-        category === "Tenda"
-          ? "tent"
-          : category === "Sleeping Gear"
-          ? "sleeping"
-          : category === "Cooking"
-          ? "stove"
-          : "light",
-    };
-
-    setStockItems((prev) => [newItem, ...prev]);
-    setIsModalOpen(false);
-    // Reset form
-    setName("");
-    setDescription("");
-    setTags("");
-    alert(`Alat "${name}" berhasil ditambahkan ke inventaris!`);
+  // Open modal for Add
+  const handleOpenAdd = () => {
+    setEditingItem(null);
+    setFormName("");
+    setFormCategory("Tenda");
+    setFormStock(4);
+    setFormPrice(95000);
+    setFormValue(850000);
+    setFormDescription("Tenda luas untuk keluarga, double layer, anti air 3000 mm.");
+    setFormTags(["family", "waterproof"]);
+    setIsAddingTag(false);
+    setNewTagInput("");
+    setIsFormModalOpen(true);
   };
 
-  const handleDeleteItem = (idDoc: string, itemName: string) => {
-    if (confirm(`Hapus "${itemName}" dari daftar stok?`)) {
-      setStockItems((prev) => prev.filter((item) => item.idDoc !== idDoc));
+  // Open modal for Edit
+  const handleOpenEdit = (item: EquipmentStockItem) => {
+    setEditingItem(item);
+    setFormName(item.name);
+    setFormCategory(item.category);
+    setFormStock(item.stock);
+    setFormPrice(item.pricePerDay);
+    setFormValue(item.totalValue);
+    setFormDescription(
+      item.description || "Tenda luas untuk keluarga, double layer, anti air 3000 mm."
+    );
+    setFormTags(item.tags && item.tags.length > 0 ? item.tags : ["family", "waterproof"]);
+    setIsAddingTag(false);
+    setNewTagInput("");
+    setIsFormModalOpen(true);
+  };
+
+  // Save Add / Edit
+  const handleSaveForm = (e: React.FormEvent) => {
+    e.preventDefault();
+    const stockNum = Number(formStock);
+    const priceNum = Number(formPrice);
+    const valueNum = Number(formValue);
+    const status: EquipmentStockItem["status"] =
+      stockNum > 5 ? "Tersedia" : stockNum > 0 ? "Menipis" : "Habis";
+
+    if (editingItem) {
+      // Update existing item
+      setStockItems((prev) =>
+        prev.map((item) =>
+          item.idDoc === editingItem.idDoc
+            ? {
+                ...item,
+                name: formName,
+                category: formCategory,
+                stock: stockNum,
+                pricePerDay: priceNum,
+                totalValue: valueNum,
+                description: formDescription,
+                tags: formTags,
+                status,
+              }
+            : item
+        )
+      );
+    } else {
+      // Add new item
+      const newItem: EquipmentStockItem = {
+        idDoc: `6500a1b2c3d4...${Math.floor(1000 + Math.random() * 9000)}`,
+        name: formName || "Tenda Dome 6 Orang",
+        category: formCategory,
+        stock: stockNum,
+        pricePerDay: priceNum,
+        totalValue: valueNum,
+        description: formDescription,
+        tags: formTags,
+        status,
+        iconType:
+          formCategory === "Tenda"
+            ? "tent"
+            : formCategory === "Sleeping Gear"
+            ? "sleeping"
+            : formCategory === "Cooking"
+            ? "stove"
+            : "light",
+      };
+      setStockItems((prev) => [newItem, ...prev]);
+    }
+
+    setIsFormModalOpen(false);
+  };
+
+  // Add tag chip
+  const handleAddTag = () => {
+    if (newTagInput.trim()) {
+      setFormTags((prev) => [...prev, newTagInput.trim().toLowerCase()]);
+      setNewTagInput("");
+      setIsAddingTag(false);
+    }
+  };
+
+  // Remove tag chip
+  const handleRemoveTag = (tagToRemove: string) => {
+    setFormTags((prev) => prev.filter((t) => t !== tagToRemove));
+  };
+
+  // Confirm delete
+  const handleConfirmDelete = () => {
+    if (itemToDelete) {
+      setStockItems((prev) => prev.filter((item) => item.idDoc !== itemToDelete.idDoc));
+      setItemToDelete(null);
     }
   };
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Header action bar */}
+      {/* Title & Action Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-            Inventaris & Manajemen Stok Alat
-          </h2>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Kelola persediaan unit peralatan camping, harga sewa per hari, dan nilai aset.
-          </p>
-        </div>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+          Manajemen Stok Alat
+        </h1>
 
         <button
           type="button"
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-[#1b4332] hover:bg-[#143225] text-white text-xs font-semibold rounded-xl flex items-center gap-2 transition-colors cursor-pointer shadow-xs self-start sm:self-auto"
+          onClick={handleOpenAdd}
+          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#286043] hover:bg-[#1e4a33] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs self-start sm:self-auto"
         >
-          <Plus className="w-4 h-4" /> Tambah Alat Baru
+          <Plus className="w-3.5 h-3.5" />
+          <span>Tambah Alat</span>
         </button>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0">
+      {/* Search Input & Category Filters */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-2.5" />
+          <input
+            type="text"
+            placeholder="Cari nama alat..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="text-xs border border-gray-200 bg-white rounded-xl pl-9 pr-4 py-2 w-60 sm:w-64 focus:outline-none focus:border-[#286043] shadow-2xs"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
           {categories.map((cat) => (
             <button
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 selectedCategory === cat
-                  ? "bg-[#1b4332] text-white shadow-xs"
-                  : "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200"
+                  ? "bg-[#286043] text-white shadow-xs"
+                  : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
               }`}
             >
               {cat}
             </button>
           ))}
         </div>
-
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="Cari alat camping..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="text-xs border border-gray-200 rounded-xl px-3.5 py-2 pl-9 w-full sm:w-64 focus:outline-none focus:border-[#1b4332]"
-          />
-          <Search className="w-3.5 h-3.5 text-gray-400 absolute left-3 top-2.5" />
-        </div>
       </div>
 
-      {/* Stock Table */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-xs overflow-hidden">
+      {/* Main Stock Table */}
+      <div className="bg-white rounded-2xl border border-gray-200/80 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-gray-50 text-gray-500 uppercase font-semibold text-[10px]">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[#eff1f3] text-gray-400 font-medium">
               <tr>
-                <th className="py-3.5 px-5">Nama Alat</th>
-                <th className="py-3.5 px-4">Kategori</th>
-                <th className="py-3.5 px-4">Stok Unit</th>
-                <th className="py-3.5 px-4">Harga Sewa</th>
-                <th className="py-3.5 px-4">Nilai Barang</th>
-                <th className="py-3.5 px-4">Status</th>
-                <th className="py-3.5 px-5 text-right">Aksi</th>
+                <th scope="col" className="py-4 px-6 font-medium text-gray-400">
+                  ID Document
+                </th>
+                <th scope="col" className="py-4 px-6 font-medium text-gray-400">
+                  Nama Alat
+                </th>
+                <th scope="col" className="py-4 px-6 font-medium text-gray-400">
+                  Kategori
+                </th>
+                <th scope="col" className="py-4 px-6 font-medium text-gray-400">
+                  Stok
+                </th>
+                <th scope="col" className="py-4 px-6 font-medium text-gray-400">
+                  Harga / Hari
+                </th>
+                <th scope="col" className="py-4 px-6 font-medium text-gray-400">
+                  Nilai Alat
+                </th>
+                <th scope="col" className="py-4 px-6 font-medium text-gray-400">
+                  Status
+                </th>
+                <th scope="col" className="py-4 px-6 font-medium text-gray-400">
+                  Aksi
+                </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-gray-100 font-normal">
               {filteredItems.map((item) => (
-                <tr key={item.idDoc} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="py-4 px-5">
-                    <div>
-                      <span className="font-bold text-gray-900 block text-sm">
+                <tr key={item.idDoc} className="hover:bg-gray-50/70 transition-colors">
+                  <td className="py-4 px-6 text-gray-500 font-mono text-xs whitespace-nowrap">
+                    {item.idDoc}
+                  </td>
+                  <td className="py-4 px-6">
+                    <div className="flex items-center gap-3">
+                      <ItemIcon iconType={item.iconType} category={item.category} />
+                      <span className="font-bold text-gray-900 text-sm whitespace-nowrap">
                         {item.name}
-                      </span>
-                      <span className="text-[10px] text-gray-400 font-mono">
-                        {item.idDoc}
                       </span>
                     </div>
                   </td>
-                  <td className="py-4 px-4 font-medium text-gray-600">
+                  <td className="py-4 px-6 text-gray-700 whitespace-nowrap">
                     {item.category}
                   </td>
-                  <td className="py-4 px-4 font-bold text-gray-900">
-                    {item.stock} unit
+                  <td className="py-4 px-6 text-gray-700 whitespace-nowrap">
+                    {item.stock}
                   </td>
-                  <td className="py-4 px-4 font-semibold text-[#1b4332]">
-                    Rp {item.pricePerDay.toLocaleString("id-ID")}{" "}
-                    <span className="text-[10px] text-gray-400 font-normal">/hari</span>
+                  <td className="py-4 px-6 text-gray-800 whitespace-nowrap">
+                    Rp {item.pricePerDay.toLocaleString("id-ID")}
                   </td>
-                  <td className="py-4 px-4 text-gray-600">
+                  <td className="py-4 px-6 text-gray-800 whitespace-nowrap">
                     Rp {item.totalValue.toLocaleString("id-ID")}
                   </td>
-                  <td className="py-4 px-4">
+                  <td className="py-4 px-6 whitespace-nowrap">
                     <span
-                      className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        item.status === "Tersedia"
-                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                          : item.status === "Menipis"
-                          ? "bg-amber-50 text-amber-700 border border-amber-200"
-                          : "bg-red-50 text-red-700 border border-red-200"
-                      }`}
+                      className={`inline-block px-3.5 py-1 rounded-full text-xs font-semibold ${getStatusBadge(
+                        item.status
+                      )}`}
                     >
                       {item.status}
                     </span>
                   </td>
-                  <td className="py-4 px-5 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                  <td className="py-4 px-6 whitespace-nowrap">
+                    <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() =>
-                          alert(`Fitur edit untuk "${item.name}" dapat disesuaikan langsung.`)
-                        }
-                        className="p-1.5 text-gray-400 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                        title="Edit Alat"
+                        onClick={() => handleOpenEdit(item)}
+                        className="px-3.5 py-1.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-2xs"
                       >
-                        <Edit2 className="w-3.5 h-3.5" />
+                        Edit
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDeleteItem(item.idDoc, item.name)}
-                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer"
-                        title="Hapus Alat"
+                        onClick={() => setItemToDelete(item)}
+                        className="px-3.5 py-1.5 bg-[#b83828] hover:bg-[#a53022] text-white text-xs font-semibold rounded-md transition-colors cursor-pointer shadow-2xs"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        Hapus
                       </button>
                     </div>
                   </td>
@@ -215,148 +366,368 @@ export default function AdminStokPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Table Footer: Pagination */}
+        <div className="p-4 sm:px-6 border-t border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-gray-500">
+          <span>Menampilkan 1–{filteredItems.length} dari 34 alat</span>
+
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              className="px-2.5 py-1 rounded-md border border-gray-200 text-gray-400 hover:text-gray-600 bg-white cursor-pointer"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1 rounded-md bg-[#286043] text-white font-bold cursor-pointer"
+            >
+              1
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 bg-white cursor-pointer"
+            >
+              2
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 bg-white cursor-pointer"
+            >
+              3
+            </button>
+            <button
+              type="button"
+              className="px-2.5 py-1 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 bg-white cursor-pointer"
+            >
+              ›
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Add Equipment Modal */}
-      {isModalOpen && (
+      {/* MODAL 1: Tambah / Edit Alat Baru (Image 2 Left Modal) */}
+      {isFormModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl overflow-hidden border border-gray-100 flex flex-col max-h-[90vh]">
-            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="font-bold text-gray-900 text-sm sm:text-base">
-                Tambah Alat Camping Baru
-              </h3>
+          <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh]">
+            {/* Modal Header */}
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+                {editingItem ? "Edit Alat" : "Tambah Alat Baru"}
+              </h2>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-500 cursor-pointer"
+                onClick={() => setIsFormModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 p-1 cursor-pointer transition-colors"
               >
-                <X className="w-4 h-4" />
+                <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddEquipment} className="p-6 overflow-y-auto space-y-4">
+            {/* Modal Form */}
+            <form onSubmit={handleSaveForm} className="p-5 sm:p-6 space-y-3.5 overflow-y-auto flex-1">
+              {/* Row 1: Nama Alat & Kategori */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-800 mb-1">
+                    Nama alat
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Tenda Dome 6 Orang"
+                    value={formName}
+                    onChange={(e) => setFormName(e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 focus:outline-none focus:border-[#286043]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-800 mb-1">
+                    Kategori
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formCategory}
+                      onChange={(e) =>
+                        setFormCategory(e.target.value as EquipmentStockItem["category"])
+                      }
+                      className="w-full text-xs border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 focus:outline-none focus:border-[#286043] bg-white cursor-pointer appearance-none pr-8"
+                    >
+                      <option value="Tenda">Tenda ▾</option>
+                      <option value="Sleeping Gear">Sleeping Gear ▾</option>
+                      <option value="Cooking">Cooking ▾</option>
+                      <option value="Lighting">Lighting ▾</option>
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-2.5 text-xs text-gray-400">
+                      ▾
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Jumlah Stok & Harga / Hari */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-800 mb-1">
+                    Jumlah stok
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    placeholder="4"
+                    value={formStock}
+                    onChange={(e) => setFormStock(e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 focus:outline-none focus:border-[#286043]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-800 mb-1">
+                    Harga / hari (Rp)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1000"
+                    required
+                    placeholder="95000"
+                    value={formPrice}
+                    onChange={(e) => setFormPrice(e.target.value)}
+                    className="w-full text-xs border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 focus:outline-none focus:border-[#286043]"
+                  />
+                </div>
+              </div>
+
+              {/* Row 3: Harga Beli / Nilai Alat */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Nama Alat Camping
+                <label className="block text-xs font-semibold text-gray-800 mb-1">
+                  Harga Beli / Nilai Alat (Rp) — dasar hitung denda
                 </label>
                 <input
-                  type="text"
+                  type="number"
+                  min="0"
+                  step="5000"
                   required
-                  placeholder="Contoh: Tenda Dome 6 Orang Waterproof"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full text-xs border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 focus:outline-none focus:border-[#1b4332]"
+                  placeholder="850000"
+                  value={formValue}
+                  onChange={(e) => setFormValue(e.target.value)}
+                  className="w-full text-xs border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 focus:outline-none focus:border-[#286043]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Kategori
-                  </label>
-                  <select
-                    value={category}
-                    onChange={(e) =>
-                      setCategory(e.target.value as EquipmentStockItem["category"])
-                    }
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:border-[#1b4332] bg-white cursor-pointer"
-                  >
-                    <option value="Tenda">Tenda</option>
-                    <option value="Sleeping Gear">Sleeping Gear</option>
-                    <option value="Cooking">Cooking</option>
-                    <option value="Lighting">Lighting</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Jumlah Stok Unit
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={stock}
-                    onChange={(e) => setStock(Number(e.target.value))}
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:border-[#1b4332]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Harga Sewa / Hari (Rp)
-                  </label>
-                  <input
-                    type="number"
-                    min="1000"
-                    step="1000"
-                    required
-                    value={pricePerDay}
-                    onChange={(e) => setPricePerDay(Number(e.target.value))}
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:border-[#1b4332]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-700 mb-1">
-                    Estimasi Nilai Barang (Rp)
-                  </label>
-                  <input
-                    type="number"
-                    min="1000"
-                    step="5000"
-                    required
-                    value={totalValue}
-                    onChange={(e) => setTotalValue(Number(e.target.value))}
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:border-[#1b4332]"
-                  />
-                </div>
-              </div>
-
+              {/* Row 4: Deskripsi */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Deskripsi / Spesifikasi
+                <label className="block text-xs font-semibold text-gray-800 mb-1">
+                  Deskripsi
                 </label>
                 <textarea
                   rows={2}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Kapasitas, ketahanan air, lapisan bahan..."
-                  className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 text-gray-800 focus:outline-none focus:border-[#1b4332]"
+                  placeholder="Tenda luas untuk keluarga, double layer, anti air 3000 mm."
+                  value={formDescription}
+                  onChange={(e) => setFormDescription(e.target.value)}
+                  className="w-full text-xs border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 focus:outline-none focus:border-[#286043]"
                 />
               </div>
 
+              {/* Row 5: Tags */}
               <div>
-                <label className="block text-xs font-semibold text-gray-700 mb-1">
-                  Tags (Pisahkan koma)
+                <label className="block text-xs font-semibold text-gray-800 mb-1">
+                  Tags
                 </label>
-                <input
-                  type="text"
-                  placeholder="waterproof, family, lightweight"
-                  value={tags}
-                  onChange={(e) => setTags(e.target.value)}
-                  className="w-full text-xs border border-gray-200 rounded-xl px-3.5 py-2 text-gray-800 focus:outline-none focus:border-[#1b4332]"
-                />
+                <div className="flex flex-wrap items-center gap-2">
+                  {formTags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full text-xs font-medium border border-gray-200 text-gray-700 bg-white"
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveTag(tag)}
+                        className="text-gray-400 hover:text-red-500 cursor-pointer"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))}
+
+                  {isAddingTag ? (
+                    <div className="inline-flex items-center gap-1">
+                      <input
+                        type="text"
+                        autoFocus
+                        placeholder="Tag baru..."
+                        value={newTagInput}
+                        onChange={(e) => setNewTagInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddTag();
+                          }
+                        }}
+                        className="text-xs border border-gray-300 rounded-full px-2.5 py-0.5 w-24 focus:outline-none focus:border-[#286043]"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddTag}
+                        className="text-xs text-[#286043] font-bold px-1"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingTag(false)}
+                        className="text-xs text-gray-400 font-bold px-1"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingTag(true)}
+                      className="px-3 py-0.5 rounded-full text-xs font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 bg-white cursor-pointer"
+                    >
+                      + tag
+                    </button>
+                  )}
+                </div>
               </div>
 
-              <div className="pt-3 flex gap-3">
+              {/* Row 6: Upload Box */}
+              <div className="border border-dashed border-gray-300 rounded-xl py-3 px-4 text-center bg-gray-50/50 hover:bg-gray-50 transition-colors cursor-pointer">
+                <p className="text-xs text-gray-500 font-medium">
+                  📷 Unggah foto alat (JPG/PNG, maks 2 MB)
+                </p>
+              </div>
+
+              {/* Footer Buttons */}
+              <div className="pt-2 flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                  onClick={() => setIsFormModalOpen(false)}
+                  className="flex-1 py-2.5 border border-gray-200 hover:bg-gray-50 text-gray-700 font-semibold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer text-center"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-[#1b4332] hover:bg-[#143225] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shadow-xs"
+                  className="flex-1 py-2.5 bg-[#286043] hover:bg-[#1e4a33] text-white font-semibold text-xs sm:text-sm rounded-xl transition-colors cursor-pointer shadow-xs text-center"
                 >
                   Simpan Alat
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Konfirmasi Hapus Alat (Image 2 Right Modal) */}
+      {itemToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 sm:p-7 border border-gray-100 flex flex-col items-center text-center">
+            {/* Trash Basket Illustration */}
+            <div className="w-16 h-16 flex items-center justify-center mb-2">
+              <svg viewBox="0 0 64 64" className="w-16 h-16" fill="none">
+                {/* Wastebasket mesh illustration */}
+                <ellipse
+                  cx="32"
+                  cy="14"
+                  rx="18"
+                  ry="4.5"
+                  stroke="#475569"
+                  strokeWidth="1.5"
+                  fill="#f1f5f9"
+                />
+                {/* Crumpled paper inside */}
+                <path
+                  d="M26 13 C26 9, 38 9, 38 13 Z"
+                  fill="#e2e8f0"
+                  stroke="#94a3b8"
+                  strokeWidth="1"
+                />
+                <ellipse cx="32" cy="14" rx="16" ry="4" fill="#ffffff" />
+                {/* Basket body */}
+                <path
+                  d="M14 14 L19 50 C19 53, 45 53, 45 50 L50 14"
+                  stroke="#475569"
+                  strokeWidth="1.5"
+                  fill="#f8fafc"
+                />
+                <ellipse
+                  cx="32"
+                  cy="50"
+                  rx="13"
+                  ry="3"
+                  stroke="#475569"
+                  strokeWidth="1.5"
+                  fill="#cbd5e1"
+                />
+                {/* Mesh wires */}
+                <line
+                  x1="16"
+                  y1="22"
+                  x2="48"
+                  y2="22"
+                  stroke="#94a3b8"
+                  strokeWidth="1"
+                  strokeDasharray="1,1"
+                />
+                <line
+                  x1="17"
+                  y1="31"
+                  x2="47"
+                  y2="31"
+                  stroke="#94a3b8"
+                  strokeWidth="1"
+                  strokeDasharray="1,1"
+                />
+                <line
+                  x1="18"
+                  y1="40"
+                  x2="46"
+                  y2="40"
+                  stroke="#94a3b8"
+                  strokeWidth="1"
+                  strokeDasharray="1,1"
+                />
+                <line x1="23" y1="16" x2="23" y2="49" stroke="#94a3b8" strokeWidth="1" />
+                <line x1="32" y1="18" x2="32" y2="50" stroke="#94a3b8" strokeWidth="1" />
+                <line x1="41" y1="16" x2="41" y2="49" stroke="#94a3b8" strokeWidth="1" />
+              </svg>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-lg font-bold text-gray-900 tracking-tight mt-1">
+              Hapus alat ini?
+            </h3>
+
+            {/* Description */}
+            <p className="text-xs text-gray-500 mt-2 leading-relaxed px-2">
+              <span className="font-semibold text-gray-700">{itemToDelete.name}</span>{" "}
+              (ID {itemToDelete.idDoc}) akan dihapus dari database dan tidak bisa
+              dikembalikan.
+            </p>
+
+            {/* Footer Buttons */}
+            <div className="w-full flex items-center gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => setItemToDelete(null)}
+                className="flex-1 py-2.5 px-4 border border-gray-200 hover:bg-gray-50 text-gray-700 text-xs sm:text-sm font-semibold rounded-xl transition-colors cursor-pointer text-center"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="flex-1 py-2.5 px-4 bg-[#b83828] hover:bg-[#a53022] text-white text-xs sm:text-sm font-semibold rounded-xl transition-colors cursor-pointer text-center shadow-xs"
+              >
+                Ya, Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}

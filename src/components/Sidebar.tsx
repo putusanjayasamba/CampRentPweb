@@ -50,7 +50,7 @@ export default function Sidebar({
     >
       <div>
         {/* Brand Header */}
-        <div className={`px-6 py-5 border-b ${borderClass}`}>
+        <div className={`px-6 py-6 ${isStaff ? `border-b ${borderClass}` : ""}`}>
           <Link href={brandHref} className="text-xl font-bold tracking-tight">
             Camp<span className="text-[#f97316]">Rent</span>
           </Link>
@@ -76,11 +76,11 @@ export default function Sidebar({
         </nav>
       </div>
 
-      {/* Footer: Role + Logout Button */}
+      {/* Footer: Role + Logout */}
       <div
-        className={`px-4 py-3.5 border-t ${borderClass} flex items-center justify-between`}
+        className={`px-6 py-5 ${isStaff ? `border-t ${borderClass}` : "border-t border-white/10"} flex items-center justify-between gap-2`}
       >
-        <span className="text-xs text-[#a0b8aa] truncate">{roleLabel}</span>
+        <span className="text-xs text-[#a0b8aa]/80 truncate">{roleLabel}</span>
         <button
           type="button"
           onClick={handleLogout}
