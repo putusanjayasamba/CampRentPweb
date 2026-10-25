@@ -1,12 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  INITIAL_STAFF_BOOKINGS,
-  BookingOps,
-} from "@/data/staffData";
+import { INITIAL_STAFF_BOOKINGS, BookingOps } from "@/data/staffData";
 
-// Panel Cek Kondisi Fisik
+// Panel Cek Kondisi Fisik (Pengembalian)
 interface ConditionPanelProps {
   booking: BookingOps;
   onSave: (data: { kondisi: string; denda: number; catatan: string }) => void;
@@ -40,10 +37,7 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
   }, [totalDendaOtomatis]);
 
   const kondisiOptions: Array<"Baik" | "Rusak Ringan" | "Rusak Berat" | "Hilang"> = [
-    "Baik",
-    "Rusak Ringan",
-    "Rusak Berat",
-    "Hilang",
+    "Baik", "Rusak Ringan", "Rusak Berat", "Hilang",
   ];
 
   const handleSave = () => {
@@ -53,14 +47,18 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4 text-sm overflow-y-auto max-h-[calc(100vh-140px)] shadow-xs">
+    <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4 text-sm overflow-y-auto max-h-[calc(100vh-120px)]">
+      {/* Header */}
       <div>
         <h3 className="font-bold text-gray-900 text-base">
-          Cek Kondisi Fisik - {booking.kode}
+          Cek Kondisi Fisik · {booking.kode}
         </h3>
-        <p className="text-xs text-gray-500 mt-0.5">{booking.alat} - {booking.customer}</p>
+        <p className="text-xs text-gray-500 mt-0.5">
+          {booking.alat} · {booking.customer}
+        </p>
       </div>
 
+      {/* Kondisi Alat */}
       <div>
         <p className="text-xs font-semibold text-gray-600 mb-2">Kondisi alat</p>
         <div className="flex flex-wrap gap-2">
@@ -78,7 +76,7 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
                     : k === "Rusak Berat"
                     ? "bg-red-100 text-red-700 border-red-400"
                     : "bg-gray-800 text-white border-gray-800"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                  : "bg-white text-gray-500 border-gray-200 hover:border-gray-400"
               }`}
             >
               {k}
@@ -87,36 +85,26 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
         </div>
       </div>
 
+      {/* Checklist Kondisi */}
       <div className="space-y-2">
-        <label className="flex items-center gap-2.5 text-xs text-gray-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={kelengkapan}
-            onChange={(e) => setKelengkapan(e.target.checked)}
-            className="w-4 h-4 rounded text-[#1e5c36] accent-[#1e5c36]"
-          />
-          Kelengkapan aksesoris
-        </label>
-        <label className="flex items-center gap-2.5 text-xs text-gray-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={tidakSobekan}
-            onChange={(e) => setTidakSobekan(e.target.checked)}
-            className="w-4 h-4 rounded text-[#1e5c36] accent-[#1e5c36]"
-          />
-          Tidak ada sobekan
-        </label>
-        <label className="flex items-center gap-2.5 text-xs text-gray-700 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={bersihKering}
-            onChange={(e) => setBersihKering(e.target.checked)}
-            className="w-4 h-4 rounded text-[#1e5c36] accent-[#1e5c36]"
-          />
-          Bersih dan kering
-        </label>
+        {[
+          { label: "Kelengkapan aksesoris", state: kelengkapan, setter: setKelengkapan },
+          { label: "Tidak ada sobekan", state: tidakSobekan, setter: setTidakSobekan },
+          { label: "Bersih dan kering", state: bersihKering, setter: setBersihKering },
+        ].map(({ label, state, setter }) => (
+          <label key={label} className="flex items-center gap-2.5 text-xs text-gray-700 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={state}
+              onChange={(e) => setter(e.target.checked)}
+              className="w-4 h-4 rounded accent-[#1e5c36]"
+            />
+            {label}
+          </label>
+        ))}
       </div>
 
+      {/* Jam Keterlambatan */}
       <div>
         <p className="text-xs font-semibold text-gray-600 mb-1.5">Jam keterlambatan pengembalian</p>
         <div className="flex items-center gap-2">
@@ -135,17 +123,18 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
           >
             +
           </button>
-          <span className="text-xs text-gray-400">= {jamTerlambat * 10}% dari biaya sewa</span>
+          <span className="text-xs text-gray-400">(0 = tepat waktu)</span>
         </div>
       </div>
 
-      <div className="bg-gray-50 rounded-xl p-3 space-y-1.5 text-xs border border-gray-100">
+      {/* Rincian Denda */}
+      <div className="bg-gray-50 rounded-xl p-3.5 space-y-1.5 text-xs border border-gray-100">
         <div className="flex justify-between text-gray-600">
           <span>Estimasi nilai alat</span>
           <span className="font-semibold text-gray-800">Rp {estimasiNilai.toLocaleString("id-ID")}</span>
         </div>
         <div className="flex justify-between text-gray-600">
-          <span>Denda kerusakan ({kondisi})</span>
+          <span>Denda kerusakan ({kondisi}, {kondisi === "Rusak Ringan" ? "20%" : kondisi === "Rusak Berat" ? "50%" : kondisi === "Hilang" ? "100%" : "0%"})</span>
           <span className="font-semibold text-red-600">Rp {dendaKerusakan.toLocaleString("id-ID")}</span>
         </div>
         <div className="flex justify-between text-gray-600">
@@ -153,7 +142,7 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
           <span className="font-semibold text-gray-800">Rp {totalSewa.toLocaleString("id-ID")}</span>
         </div>
         <div className="flex justify-between text-gray-600">
-          <span>Denda keterlambatan ({jamTerlambat} jam)</span>
+          <span>Denda keterlambatan ({jamTerlambat} jam × 10%)</span>
           <span className="font-semibold text-red-600">Rp {dendaKeterlambatan.toLocaleString("id-ID")}</span>
         </div>
         <div className="border-t border-gray-200 pt-1.5 flex justify-between font-bold text-gray-900">
@@ -162,37 +151,46 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
         </div>
       </div>
 
+      {/* Skema Info */}
+      <p className="text-[10px] text-gray-400 leading-relaxed">
+        Skema kondisi: Baik 0% · Rusak Ringan 20% · Rusak Berat 50% · Hilang 100% dari nilai alat.
+        Skema keterlambatan: 10% dari total harga sewa per 1 jam telat, berlaku untuk seluruh alat dalam booking.
+      </p>
+
+      {/* Catatan Petugas */}
       <div>
         <p className="text-xs font-semibold text-gray-600 mb-1.5">Catatan petugas</p>
         <textarea
           value={catatan}
           onChange={(e) => setCatatan(e.target.value)}
-          placeholder="Tambahkan catatan kondisi fisik..."
+          placeholder="Tambahkan catatan kondisi..."
           rows={2}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:border-[#1e5c36] resize-none"
         />
       </div>
 
+      {/* Denda Final */}
       <div>
-        <p className="text-xs font-semibold text-gray-600 mb-1.5">Denda final (Rp) - bisa disesuaikan</p>
+        <p className="text-xs font-semibold text-gray-600 mb-1.5">Denda final (Rp) — bisa disesuaikan</p>
         <input
           type="number"
           value={dendaFinal}
           onChange={(e) => setDendaFinal(Number(e.target.value))}
-          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 font-bold focus:outline-none focus:border-[#1e5c36]"
+          className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 font-bold focus:outline-none focus:border-[#1e5c36]"
         />
       </div>
 
+      {/* Simpan Button */}
       <button
         type="button"
         onClick={handleSave}
-        className={`w-full py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-xs ${
+        className={`w-full py-3 rounded-xl text-sm font-bold transition-all cursor-pointer ${
           saved
             ? "bg-emerald-700 text-white"
             : "bg-[#1e5c36] hover:bg-[#164327] text-white"
         }`}
       >
-        {saved ? "✓ Berhasil Disimpan!" : "Simpan Hasil Pengecekan"}
+        {saved ? "✓ Berhasil Disimpan!" : "Simpan & Tandai Completed"}
       </button>
     </div>
   );
@@ -211,81 +209,81 @@ export default function PengambilanPengembalianPage() {
   };
 
   return (
-    <div className="p-6 flex flex-col lg:flex-row gap-6">
+    <div className="flex flex-col lg:flex-row gap-6 h-full">
       {/* Table Side */}
-      <div className="flex-1 min-w-0">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Kelola Status Pesanan</h2>
+      <div className="flex-1 min-w-0 space-y-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-gray-900">Kelola Status Pesanan</h2>
 
-        {/* Status Flow Indicator */}
-        <div className="flex items-center gap-2 mb-5 text-xs">
-          <span className="px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-semibold border border-emerald-200">
-            Approved
-          </span>
-          <span className="text-gray-400">→</span>
-          <span className="px-3 py-1 rounded-full bg-orange-100 text-orange-700 font-semibold border border-orange-200">
-            Picked Up
-          </span>
-          <span className="text-gray-400">→</span>
-          <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-600 font-semibold border border-gray-200">
-            Completed
-          </span>
+          {/* Status flow pills */}
+          <div className="flex items-center gap-2 text-xs">
+            <span className="px-3 py-1 rounded-full bg-[#e0f2e9] text-[#1e5c36] font-semibold border border-[#a7e0bf]">
+              Approved
+            </span>
+            <span className="text-gray-400">→</span>
+            <span className="px-3 py-1 rounded-full bg-orange-50 text-orange-600 font-semibold border border-orange-200">
+              Picked Up
+            </span>
+            <span className="text-gray-400">→</span>
+            <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-500 font-semibold border border-gray-200">
+              Completed
+            </span>
+          </div>
         </div>
 
         {/* Table */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-xs">
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold uppercase text-[10px]">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-[#f8fafc] text-gray-500 text-xs font-medium border-b border-gray-100">
                 <tr>
-                  <th className="py-3 px-4">Kode</th>
-                  <th className="py-3 px-4">Customer</th>
-                  <th className="py-3 px-4">Alat</th>
-                  <th className="py-3 px-4">Jadwal</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-center">Aksi</th>
+                  <th className="py-3.5 px-5">Kode</th>
+                  <th className="py-3.5 px-4">Customer</th>
+                  <th className="py-3.5 px-4">Alat</th>
+                  <th className="py-3.5 px-4">Jadwal</th>
+                  <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-5">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {bookings.map((b) => (
                   <tr
                     key={b.kode}
-                    onClick={() => b.status === "Picked Up" && setSelectedBooking(b)}
-                    className={`transition-colors cursor-pointer ${
+                    className={`transition-colors ${
                       selectedBooking?.kode === b.kode
-                        ? "bg-emerald-50/70"
-                        : "hover:bg-gray-50"
+                        ? "bg-emerald-50/60"
+                        : "hover:bg-gray-50/60"
                     }`}
                   >
-                    <td className="py-3.5 px-4 font-bold text-gray-900">{b.kode}</td>
-                    <td className="py-3.5 px-4 text-gray-700">{b.customer}</td>
-                    <td className="py-3.5 px-4 text-gray-600">{b.alat}</td>
-                    <td className="py-3.5 px-4 text-gray-500">{b.jadwal}</td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-4 px-5 font-bold text-gray-900">{b.kode}</td>
+                    <td className="py-4 px-4 text-gray-800">{b.customer}</td>
+                    <td className="py-4 px-4 text-gray-600">{b.alat}</td>
+                    <td className="py-4 px-4 text-gray-500">{b.jadwal}</td>
+                    <td className="py-4 px-4">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                           b.status === "Approved"
-                            ? "bg-emerald-100 text-emerald-700"
+                            ? "bg-[#e0f2e9] text-[#1e5c36]"
                             : b.status === "Picked Up"
-                            ? "bg-orange-100 text-orange-700"
-                            : "bg-gray-100 text-gray-600"
+                            ? "bg-orange-50 text-orange-600"
+                            : "bg-gray-100 text-gray-500"
                         }`}
                       >
                         {b.status}
                       </span>
                     </td>
-                    <td className="py-3.5 px-4 text-center">
+                    <td className="py-4 px-5">
                       {b.status === "Approved" && (
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                          onClick={() =>
                             setBookings((prev) =>
                               prev.map((item) =>
                                 item.kode === b.kode ? { ...item, status: "Picked Up" } : item
                               )
-                            );
-                          }}
-                          className="px-3 py-1 rounded-lg bg-[#1e5c36] text-white text-[10px] font-bold hover:bg-[#164327] transition-all cursor-pointer"
+                            )
+                          }
+                          className="px-3 py-1.5 rounded-lg bg-[#1e5c36] hover:bg-[#164327] text-white text-xs font-semibold transition-colors cursor-pointer"
                         >
                           Verifikasi Pengambilan
                         </button>
@@ -293,17 +291,14 @@ export default function PengambilanPengembalianPage() {
                       {b.status === "Picked Up" && (
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedBooking(b);
-                          }}
-                          className="px-3 py-1 rounded-lg bg-[#f97316] text-white text-[10px] font-bold hover:bg-[#ea580c] transition-all cursor-pointer"
+                          onClick={() => setSelectedBooking(b)}
+                          className="px-3 py-1.5 rounded-lg bg-[#f97316] hover:bg-[#ea580c] text-white text-xs font-semibold transition-colors cursor-pointer"
                         >
                           Terima Pengembalian
                         </button>
                       )}
                       {b.status === "Completed" && (
-                        <span className="text-gray-400 text-xs">--</span>
+                        <span className="text-gray-400 text-xs">—</span>
                       )}
                     </td>
                   </tr>
@@ -314,7 +309,7 @@ export default function PengambilanPengembalianPage() {
         </div>
       </div>
 
-      {/* Right Side: Condition Inspection Panel */}
+      {/* Right Panel: Condition Inspection */}
       <div className="w-full lg:w-80 shrink-0">
         {selectedBooking ? (
           <ConditionPanel
@@ -324,7 +319,10 @@ export default function PengambilanPengembalianPage() {
           />
         ) : (
           <div className="bg-white border border-dashed border-gray-300 rounded-xl p-8 text-center text-xs text-gray-400">
-            <p>Pilih booking dengan status <strong>Picked Up</strong> untuk melakukan cek kondisi fisik dan denda pengembalian.</p>
+            <p>
+              Pilih booking dengan status <strong>Picked Up</strong> untuk melakukan cek kondisi fisik
+              dan denda pengembalian.
+            </p>
           </div>
         )}
       </div>

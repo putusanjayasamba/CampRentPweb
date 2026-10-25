@@ -77,9 +77,7 @@ export default function Sidebar({
       </div>
 
       {/* Footer: Role + Logout */}
-      <div
-        className={`px-6 py-5 ${isStaff ? `border-t ${borderClass}` : "border-t border-white/10"} flex items-center justify-between gap-2`}
-      >
+      <div className={`px-6 py-5 border-t flex items-center justify-between gap-2 ${isStaff ? borderClass : "border-white/10"}`}>
         <span className="text-xs text-[#a0b8aa]/80 truncate">{roleLabel}</span>
         <button
           type="button"

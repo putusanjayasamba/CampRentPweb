@@ -17,94 +17,106 @@ export default function AntreanPage() {
   });
 
   return (
-    <div className="p-6 max-w-5xl">
-      <h2 className="text-xl font-bold text-gray-900 mb-4">Antrean Hari Ini</h2>
-
+    <div className="space-y-6 max-w-5xl">
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="bg-white border border-gray-200 rounded-xl p-4 flex items-center gap-4 shadow-xs">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center font-black text-2xl text-[#1e5c36]">
-            {perluDiambil}
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Perlu Diambil</p>
-            <p className="font-bold text-gray-900 text-sm">Pengambilan Hari Ini</p>
-          </div>
+      <div className="grid grid-cols-2 gap-4">
+        {/* Perlu Diambil */}
+        <div className="bg-white border-l-4 border-[#1e5c36] rounded-xl p-5 shadow-xs">
+          <p className="text-xs text-gray-500 mb-1">Perlu Diambil Hari Ini</p>
+          <p className="text-3xl font-black text-gray-900">{perluDiambil}</p>
         </div>
 
-        <div className="bg-white border-2 border-orange-400 rounded-xl p-4 flex items-center gap-4 shadow-xs">
-          <div className="w-12 h-12 rounded-xl bg-orange-50 border border-orange-200 flex items-center justify-center font-black text-2xl text-[#f97316]">
-            {perluDikembalikan}
-          </div>
-          <div>
-            <p className="text-xs text-gray-500">Perlu Dikembalikan</p>
-            <p className="font-bold text-gray-900 text-sm">Pengembalian Hari Ini</p>
-          </div>
+        {/* Perlu Dikembalikan */}
+        <div className="bg-white border-l-4 border-orange-400 rounded-xl p-5 shadow-xs">
+          <p className="text-xs text-gray-500 mb-1">Perlu Dikembalikan Hari Ini</p>
+          <p className="text-3xl font-black text-gray-900">{perluDikembalikan}</p>
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 mb-4">
-        {(["semua", "pengambilan", "pengembalian"] as const).map((tab) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setFilter(tab)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold capitalize transition-all cursor-pointer ${
-              filter === tab
-                ? "bg-[#1e5c36] text-white"
-                : "bg-white text-gray-600 border border-gray-200 hover:border-gray-400"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
+      {/* Heading + Filter */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-gray-900">Daftar Antrean · 28 Sep 2026</h2>
+
+        <div className="flex gap-2">
+          {([
+            { key: "semua" as const, label: "Semua" },
+            { key: "pengambilan" as const, label: "Pengambilan" },
+            { key: "pengembalian" as const, label: "Pengembalian" },
+          ]).map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFilter(key)}
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                filter === key
+                  ? "bg-[#1b4332] text-white"
+                  : "bg-white text-gray-700 border border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-xs">
-        <table className="w-full text-left text-xs">
-          <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold uppercase text-[10px]">
-            <tr>
-              <th className="py-3 px-4">Jam</th>
-              <th className="py-3 px-4">Kode</th>
-              <th className="py-3 px-4">Customer</th>
-              <th className="py-3 px-4">Alat</th>
-              <th className="py-3 px-4">Jenis</th>
-              <th className="py-3 px-4">Status Waktu</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {filtered.map((item) => (
-              <tr key={item.kode} className="hover:bg-gray-50">
-                <td className="py-3.5 px-4 font-mono font-bold text-gray-800">{item.jam}</td>
-                <td className="py-3.5 px-4 font-bold text-gray-900">{item.kode}</td>
-                <td className="py-3.5 px-4 text-gray-700">{item.customer}</td>
-                <td className="py-3.5 px-4 text-gray-600">{item.alat}</td>
-                <td className="py-3.5 px-4">
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      item.jenis === "Pengambilan"
-                        ? "bg-emerald-100 text-emerald-700"
-                        : "bg-orange-100 text-orange-700"
-                    }`}
-                  >
-                    {item.jenis}
-                  </span>
-                </td>
-                <td className="py-3.5 px-4">
-                  {item.terlambat ? (
-                    <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold">
-                      Terlambat
-                    </span>
-                  ) : (
-                    <span className="text-gray-400 text-xs">Tepat Waktu</span>
-                  )}
-                </td>
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className="bg-[#f8fafc] text-gray-500 text-xs font-medium border-b border-gray-100">
+              <tr>
+                <th className="py-3.5 px-5">Kode</th>
+                <th className="py-3.5 px-4">Customer</th>
+                <th className="py-3.5 px-4">Alat</th>
+                <th className="py-3.5 px-4">Jenis</th>
+                <th className="py-3.5 px-4">Jam</th>
+                <th className="py-3.5 px-5">Aksi</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filtered.map((item) => (
+                <tr key={item.kode} className="hover:bg-gray-50/60 transition-colors">
+                  <td className="py-4 px-5 font-bold text-gray-900">{item.kode}</td>
+                  <td className="py-4 px-4 text-gray-800">{item.customer}</td>
+                  <td className="py-4 px-4 text-gray-600">{item.alat}</td>
+                  <td className="py-4 px-4">
+                    <span
+                      className={`inline-block px-2.5 py-1 rounded-full text-xs font-semibold ${
+                        item.jenis === "Pengambilan"
+                          ? "bg-[#e0f2e9] text-[#1e5c36]"
+                          : "bg-orange-50 text-orange-600"
+                      }`}
+                    >
+                      {item.jenis}
+                    </span>
+                  </td>
+                  <td className="py-4 px-4">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-gray-700 font-medium">{item.jam}</span>
+                      {item.terlambat && (
+                        <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-600 text-[10px] font-bold">
+                          Terlambat
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="py-4 px-5">
+                    <button
+                      type="button"
+                      className={`px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-colors cursor-pointer ${
+                        item.jenis === "Pengambilan"
+                          ? "bg-[#1e5c36] hover:bg-[#164327]"
+                          : "bg-[#f97316] hover:bg-[#ea580c]"
+                      }`}
+                    >
+                      {item.jenis === "Pengambilan" ? "Verifikasi Pengambilan" : "Proses Pengembalian"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
