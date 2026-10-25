@@ -152,22 +152,78 @@ export default function AdminPenggunaPage() {
 
       {/* Header with Title and Tambah Pengguna Button */}
       <div className="flex items-center justify-between gap-4">
-        <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
-          Pengguna &amp; Role
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
+          <span className="lg:hidden">Pengguna</span>
+          <span className="hidden lg:inline">Pengguna &amp; Role</span>
         </h2>
 
         <button
           type="button"
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-[#24583b] hover:bg-[#1a442e] text-white text-xs sm:text-sm font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+          className="bg-[#24583b] hover:bg-[#1a442e] text-white text-xs sm:text-sm font-semibold px-3.5 py-2 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
         >
           <Plus className="w-4 h-4" />
-          <span>Tambah Pengguna</span>
+          <span className="lg:hidden">Tambah</span>
+          <span className="hidden lg:inline">Tambah Pengguna</span>
         </button>
       </div>
 
-      {/* Main Table Card */}
-      <div className="bg-white rounded-xl border border-gray-200/80 shadow-xs overflow-hidden">
+      {/* ── MOBILE CARD LIST (< lg) ── */}
+      <div className="space-y-3 lg:hidden">
+        {users.map((u) => {
+          const initial = u.name.trim().charAt(0).toUpperCase();
+          return (
+            <div key={u.id} className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs space-y-3">
+              {/* Top row: Avatar+Name & Role badge */}
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#e07a2c] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
+                    {initial}
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 text-sm leading-tight">{u.name}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{u.email}</p>
+                  </div>
+                </div>
+                <span className={`shrink-0 px-3 py-0.5 rounded-full text-[11px] font-semibold ${getRoleBadge(u.role)}`}>
+                  {u.role}
+                </span>
+              </div>
+
+              {/* Action buttons */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenRoleModal(u)}
+                  className="px-4 py-1.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-2xs"
+                >
+                  Ubah Role
+                </button>
+                {u.status === "Aktif" ? (
+                  <button
+                    type="button"
+                    onClick={() => setDeactivatingUser(u)}
+                    className="px-4 py-1.5 bg-[#b83828] hover:bg-[#a53022] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-2xs"
+                  >
+                    Nonaktifkan
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => handleActivateUser(u)}
+                    className="px-4 py-1.5 bg-[#24583b] hover:bg-[#1a442e] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-2xs"
+                  >
+                    Aktifkan
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── DESKTOP TABLE (≥ lg) — unchanged ── */}
+      <div className="hidden lg:block bg-white rounded-xl border border-gray-200/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs sm:text-sm">
             <thead className="bg-[#f8fafc] text-gray-500 font-medium text-xs border-b border-gray-100">
@@ -182,10 +238,8 @@ export default function AdminPenggunaPage() {
             <tbody className="divide-y divide-gray-100">
               {users.map((u) => {
                 const initialLetter = u.name.trim().charAt(0).toUpperCase();
-
                 return (
                   <tr key={u.id} className="hover:bg-gray-50/50 transition-colors">
-                    {/* Nama with Orange Avatar */}
                     <td className="py-4 px-6 whitespace-nowrap">
                       <div className="flex items-center gap-3">
                         <div className="w-7 h-7 rounded-full bg-[#e07a2c] text-white font-bold text-xs flex items-center justify-center shrink-0 shadow-xs">
@@ -194,35 +248,17 @@ export default function AdminPenggunaPage() {
                         <span className="font-bold text-gray-900">{u.name}</span>
                       </div>
                     </td>
-
-                    {/* Email */}
-                    <td className="py-4 px-4 text-gray-600 whitespace-nowrap">
-                      {u.email}
-                    </td>
-
-                    {/* Role */}
+                    <td className="py-4 px-4 text-gray-600 whitespace-nowrap">{u.email}</td>
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-3.5 py-1 rounded-full text-xs font-semibold ${getRoleBadge(
-                          u.role
-                        )}`}
-                      >
+                      <span className={`inline-block px-3.5 py-1 rounded-full text-xs font-semibold ${getRoleBadge(u.role)}`}>
                         {u.role}
                       </span>
                     </td>
-
-                    {/* Status */}
                     <td className="py-4 px-4 whitespace-nowrap">
-                      <span
-                        className={`inline-block px-3.5 py-1 rounded-full text-xs font-semibold ${getStatusBadge(
-                          u.status
-                        )}`}
-                      >
+                      <span className={`inline-block px-3.5 py-1 rounded-full text-xs font-semibold ${getStatusBadge(u.status)}`}>
                         {u.status}
                       </span>
                     </td>
-
-                    {/* Aksi */}
                     <td className="py-4 px-6 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         <button
@@ -232,7 +268,6 @@ export default function AdminPenggunaPage() {
                         >
                           Ubah Role
                         </button>
-
                         {u.status === "Aktif" ? (
                           <button
                             type="button"

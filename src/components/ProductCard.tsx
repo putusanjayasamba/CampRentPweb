@@ -81,9 +81,9 @@ interface ProductCardProps {
 
 export default function ProductCard({ product, onSelect }: ProductCardProps) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col group">
+    <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col group">
       {/* Top product image */}
-      <div className="relative h-44 sm:h-48 w-full bg-gray-100 overflow-hidden flex items-center justify-center">
+      <div className="relative h-32 sm:h-44 lg:h-48 w-full bg-gray-100 overflow-hidden flex items-center justify-center">
         {product.image ? (
           <img
             src={product.image}
@@ -96,49 +96,50 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
       </div>
 
       {/* Card body */}
-      <div className="p-4 sm:p-5 flex-1 flex flex-col justify-between">
+      <div className="p-3 sm:p-4 lg:p-5 flex-1 flex flex-col justify-between">
         <div>
-          <h4 className="font-bold text-gray-900 text-sm leading-snug">
+          <h4 className="font-bold text-gray-900 text-xs sm:text-sm leading-snug line-clamp-2">
             {product.name}
           </h4>
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
             {product.categoryLabel}
           </p>
 
-          <div className="mt-2 text-sm font-bold text-gray-900">
+          <div className="mt-1.5 sm:mt-2 text-xs sm:text-sm font-bold text-gray-900">
             Rp {product.price.toLocaleString("id-ID")}{" "}
-            <span className="text-xs text-gray-400 font-normal">/ hari</span>
+            <span className="text-[10px] sm:text-xs text-gray-400 font-normal">/ hari</span>
           </div>
 
-          <div className="mt-2">
+          <div className="mt-1.5 sm:mt-2">
             {product.available ? (
-              <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#e6f4ea] text-[#1e7e34]">
+              <span className="inline-block px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#e6f4ea] text-[#1e7e34]">
                 Available
               </span>
             ) : (
-              <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-[#fee2e2] text-[#b91c1c]">
+              <span className="inline-block px-2 sm:px-2.5 py-0.5 rounded-full text-[9px] sm:text-[11px] font-medium bg-[#fee2e2] text-[#b91c1c]">
                 Out of Stock
               </span>
             )}
           </div>
         </div>
 
-        <div className="mt-4">
+        <div className="mt-3 sm:mt-4">
           {product.available ? (
             <button
               type="button"
               onClick={() => onSelect(product)}
-              className="w-full py-2 bg-[#e07a2c] hover:bg-[#c8651e] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
+              className="w-full py-1.5 sm:py-2 bg-[#e07a2c] hover:bg-[#c8651e] text-white text-[11px] sm:text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
             >
-              Sewa Sekarang
+              <span className="sm:hidden">Sewa</span>
+              <span className="hidden sm:inline">Sewa Sekarang</span>
             </button>
           ) : (
             <button
               type="button"
               disabled
-              className="w-full py-2 bg-[#cbd5e1] text-[#64748b] text-xs font-semibold rounded-lg cursor-not-allowed"
+              className="w-full py-1.5 sm:py-2 bg-[#cbd5e1] text-[#64748b] text-[11px] sm:text-xs font-semibold rounded-lg cursor-not-allowed"
             >
-              Stok Habis
+              Habis
             </button>
           )}
         </div>

@@ -3,7 +3,7 @@
 import React, { useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { X, CheckCircle2 } from "lucide-react";
+import { X, CheckCircle2, SlidersHorizontal } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import {
   INITIAL_PRODUCTS,
@@ -23,6 +23,12 @@ function KatalogContent() {
   const [pickupDate, setPickupDate] = useState("28 Sep 2026");
   const [returnDate, setReturnDate] = useState("30 Sep 2026");
   const [availabilityMessage, setAvailabilityMessage] = useState<string | null>(null);
+
+  // Mobile: active category tab
+  const [activeTab, setActiveTab] = useState<string>("semua");
+
+  // Mobile filter drawer state
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
   // Form Filter states (interactive inputs in sidebar)
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -50,7 +56,6 @@ function KatalogContent() {
   const [newBookingCode, setNewBookingCode] = useState("");
 
   const modalDays = useMemo(() => {
-    // Try to extract day number from strings like "28 Sep 2026" and "30 Sep 2026"
     const matchStart = modalPickupDate.match(/^(\d{1,2})/);
     const matchEnd = modalReturnDate.match(/^(\d{1,2})/);
     if (matchStart && matchEnd) {
@@ -70,6 +75,15 @@ function KatalogContent() {
     { id: "lighting", label: "Lighting", count: 5 },
   ];
 
+  const mobileTabs = [
+    { id: "semua", label: "Semua" },
+    { id: "tenda", label: "Tenda" },
+    { id: "sleeping", label: "Sleeping Gear" },
+    { id: "cooking", label: "Cooking" },
+    { id: "lighting", label: "Lighting" },
+    { id: "carrier", label: "Carrier" },
+  ];
+
   const handleCategoryToggle = (catId: string) => {
     setSelectedCategories((prev) =>
       prev.includes(catId) ? prev.filter((id) => id !== catId) : [...prev, catId]
@@ -82,6 +96,7 @@ function KatalogContent() {
       maxPrice: maxPrice,
       availability: availabilityFilter,
     });
+    setMobileFilterOpen(false);
   };
 
   const handleResetFilter = () => {
@@ -101,10 +116,15 @@ function KatalogContent() {
     appliedFilters.availability === "available" ||
     querySearch !== "";
 
-  // Filter products based on applied filters and query search
+  // Filter products based on applied filters, active mobile tab, and query search
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
-      // 1. Category Filter: if any selected, product category must match
+      // Mobile tab filter
+      if (activeTab !== "semua" && p.category !== activeTab) {
+        return false;
+      }
+
+      // 1. Category Filter (sidebar): if any selected, product category must match
       if (appliedFilters.categories.length > 0) {
         if (!appliedFilters.categories.includes(p.category)) {
           return false;
@@ -131,7 +151,7 @@ function KatalogContent() {
 
       return true;
     });
-  }, [products, appliedFilters, querySearch]);
+  }, [products, appliedFilters, querySearch, activeTab]);
 
   const handleCheckAvailability = () => {
     setAvailabilityMessage(
@@ -155,7 +175,7 @@ function KatalogContent() {
       code: code,
       items: selectedProduct.name,
       shortItems: selectedProduct.name,
-      period: `${modalPickupDate}–${modalReturnDate}`,
+      period: `${modalPickupDate}${modalReturnDate}`,
       startDate: modalPickupDate,
       endDate: modalReturnDate,
       location: "Kantor CampRent, Denpasar",
@@ -201,87 +221,264 @@ function KatalogContent() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Seamless Deep Forest Green Hero Section */}
-      <section className="bg-[#1b4332] text-white pt-6 pb-16 px-6 sm:px-10 lg:px-12">
-        <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-          {/* Hero Left Content */}
-          <div className="max-w-xl">
-            <h1 className="text-3xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight leading-tight text-white">
-              Sewa Alat Camping
-              <br />
-              Tanpa Ribet
-            </h1>
-            <p className="mt-3 text-xs sm:text-sm text-[#9ebcae] font-normal leading-relaxed max-w-md">
-              Pilih tanggal, cek stok yang tersedia, dan booking dalam hitungan menit.
-            </p>
+      {/* HERO SECTION */}
+      <section className="bg-[#1b4332] text-white pt-6 pb-6 px-4 sm:px-6 lg:px-12">
+        <div className="max-w-7xl mx-auto">
+
+          {/* Desktop: side-by-side | Mobile: stacked */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 lg:gap-8">
+
+            {/* Hero Left Content */}
+            <div className="max-w-xl">
+              <h1 className="text-2xl sm:text-4xl lg:text-[44px] font-extrabold tracking-tight leading-tight text-white">
+                Sewa Alat Camping
+                <br />
+                Tanpa Ribet
+              </h1>
+              {/* Hide subtitle on mobile to keep it compact */}
+              <p className="hidden sm:block mt-3 text-xs sm:text-sm text-[#9ebcae] font-normal leading-relaxed max-w-md">
+                Pilih tanggal, cek stok yang tersedia, dan booking dalam hitungan menit.
+              </p>
+            </div>
+
+            {/* Hero Right: Availability Card */}
+            {/* Mobile: full-width stacked vertical | Desktop: inline horizontal */}
+            <div className="bg-white rounded-2xl p-4 sm:p-5 shadow-xl border border-white/20 text-gray-800 w-full lg:w-auto lg:shrink-0">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-end gap-3">
+                {/* Date Inputs */}
+                <div className="flex flex-col sm:flex-row gap-3 flex-1">
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1.5">
+                      Tanggal ambil
+                    </label>
+                    <input
+                      type="text"
+                      value={pickupDate}
+                      onChange={(e) => setPickupDate(e.target.value)}
+                      placeholder="28 Sep 2026"
+                      className="border border-gray-200 rounded-lg px-3.5 py-2 text-xs font-normal text-gray-700 w-full focus:outline-none focus:border-[#2d6a4f]"
+                    />
+                  </div>
+
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-semibold text-gray-600 mb-1.5">
+                      Tanggal kembali
+                    </label>
+                    <input
+                      type="text"
+                      value={returnDate}
+                      onChange={(e) => setReturnDate(e.target.value)}
+                      placeholder="30 Sep 2026"
+                      className="border border-gray-200 rounded-lg px-3.5 py-2 text-xs font-normal text-gray-700 w-full focus:outline-none focus:border-[#2d6a4f]"
+                    />
+                  </div>
+                </div>
+
+                {/* CTA Button */}
+                <button
+                  type="button"
+                  onClick={handleCheckAvailability}
+                  className="w-full sm:w-auto px-5 py-2.5 bg-[#e07a2c] hover:bg-[#c8651e] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs whitespace-nowrap flex items-center justify-center"
+                >
+                  Cek Ketersediaan
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Hero Right Floating Availability Card */}
-          <div className="bg-white rounded-2xl p-5 shadow-xl border border-white/20 flex flex-col sm:flex-row items-end gap-3 sm:gap-4 shrink-0 text-gray-800">
-            <div>
-              <label className="block text-[11px] font-semibold text-gray-600 mb-1.5">
-                Tanggal ambil
-              </label>
-              <input
-                type="text"
-                value={pickupDate}
-                onChange={(e) => setPickupDate(e.target.value)}
-                placeholder="28 Sep 2026"
-                className="border border-gray-200 rounded-lg px-3.5 py-2 text-xs font-normal text-gray-700 w-36 sm:w-40 focus:outline-none focus:border-[#2d6a4f]"
-              />
+          {/* Availability Notification Toast */}
+          {availabilityMessage && (
+            <div className="mt-4">
+              <div className="bg-[#245b43] text-emerald-100 text-xs px-4 py-2.5 rounded-lg border border-emerald-500/30 flex items-center justify-between">
+                <span>{availabilityMessage}</span>
+                <button
+                  type="button"
+                  onClick={() => setAvailabilityMessage(null)}
+                  className="text-white hover:text-emerald-200 ml-4 cursor-pointer"
+                >
+                  &#x2715;
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* MOBILE CATEGORY TABS — only visible on mobile/tablet (hidden on md+) */}
+      <div className="md:hidden bg-white border-b border-gray-100 sticky top-0 z-30 shadow-sm">
+        <div className="flex items-center">
+          {/* Scrollable Tabs */}
+          <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+            <div className="flex gap-1.5 px-3 py-2.5" style={{ width: "max-content" }}>
+              {mobileTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${
+                    activeTab === tab.id
+                      ? "bg-[#1b4332] text-white shadow-sm"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Filter icon button */}
+          <button
+            type="button"
+            onClick={() => setMobileFilterOpen(true)}
+            className="flex items-center justify-center px-3.5 py-2.5 text-gray-600 border-l border-gray-100 cursor-pointer shrink-0 relative"
+          >
+            <SlidersHorizontal className="w-4 h-4" />
+            {isFilterActive && (
+              <span className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-[#e07a2c]" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* MOBILE FILTER DRAWER */}
+      {mobileFilterOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={() => setMobileFilterOpen(false)}
+          />
+          {/* Drawer slides up from bottom */}
+          <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl p-5 space-y-5 max-h-[80vh] overflow-y-auto">
+            {/* Handle */}
+            <div className="w-10 h-1 rounded-full bg-gray-200 mx-auto -mt-1 mb-1" />
+
+            <div className="flex items-center justify-between">
+              <h2 className="font-bold text-gray-900 text-sm">Filter Produk</h2>
+              <div className="flex items-center gap-3">
+                {isFilterActive && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilter}
+                    className="text-[11px] text-[#2d6a4f] hover:underline font-semibold cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setMobileFilterOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
+            {/* Kategori */}
             <div>
-              <label className="block text-[11px] font-semibold text-gray-600 mb-1.5">
-                Tanggal kembali
-              </label>
-              <input
-                type="text"
-                value={returnDate}
-                onChange={(e) => setReturnDate(e.target.value)}
-                placeholder="30 Sep 2026"
-                className="border border-gray-200 rounded-lg px-3.5 py-2 text-xs font-normal text-gray-700 w-36 sm:w-40 focus:outline-none focus:border-[#2d6a4f]"
-              />
+              <h3 className="font-semibold text-xs text-gray-900 mb-3">Kategori</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {categoryOptions.map((cat) => {
+                  const isChecked = selectedCategories.includes(cat.id);
+                  return (
+                    <button
+                      key={cat.id}
+                      type="button"
+                      onClick={() => handleCategoryToggle(cat.id)}
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-xs font-medium transition-colors cursor-pointer ${
+                        isChecked
+                          ? "border-[#2d6a4f] bg-[#e6f4ea] text-[#2d6a4f]"
+                          : "border-gray-200 bg-white text-gray-700"
+                      }`}
+                    >
+                      <span>{cat.label}</span>
+                      <span className={`text-[10px] font-normal ${isChecked ? "text-[#2d6a4f]" : "text-gray-400"}`}>
+                        {cat.count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
+            {/* Harga */}
+            <div>
+              <div className="flex items-center justify-between text-xs font-semibold text-gray-900 mb-2">
+                <span>Harga / hari</span>
+                <span className="text-[#2d6a4f] font-bold text-[11px]">
+                  &#8804; Rp {maxPrice.toLocaleString("id-ID")}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="10000"
+                max="100000"
+                step="5000"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(Number(e.target.value))}
+                style={{
+                  background: `linear-gradient(to right, #2d6a4f 0%, #2d6a4f ${sliderPercentage}%, #cbd5e1 ${sliderPercentage}%, #cbd5e1 100%)`,
+                }}
+                className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#2d6a4f]"
+              />
+              <div className="flex items-center justify-between text-[11px] text-gray-500 mt-1">
+                <span>Rp 10.000</span>
+                <span>Rp 100.000</span>
+              </div>
+            </div>
+
+            {/* Ketersediaan */}
+            <div>
+              <h3 className="font-semibold text-xs text-gray-900 mb-2.5">Ketersediaan</h3>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs">
+                  <input
+                    type="radio"
+                    name="mob-availability"
+                    value="available"
+                    checked={availabilityFilter === "available"}
+                    onChange={() => setAvailabilityFilter("available")}
+                    className="w-3.5 h-3.5 cursor-pointer accent-[#2d6a4f]"
+                  />
+                  <span className="text-gray-700">Available</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none text-xs">
+                  <input
+                    type="radio"
+                    name="mob-availability"
+                    value="all"
+                    checked={availabilityFilter === "all"}
+                    onChange={() => setAvailabilityFilter("all")}
+                    className="w-3.5 h-3.5 cursor-pointer accent-[#2d6a4f]"
+                  />
+                  <span className="text-gray-700">Semua</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Apply button */}
             <button
               type="button"
-              onClick={handleCheckAvailability}
-              className="w-full sm:w-auto px-5 py-2.5 bg-[#e07a2c] hover:bg-[#c8651e] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs whitespace-nowrap h-[37px] flex items-center justify-center"
+              onClick={handleApplyFilter}
+              className="w-full py-3 bg-[#2d6a4f] hover:bg-[#23583c] text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer active:scale-[0.99]"
             >
-              Cek Ketersediaan
+              Terapkan Filter
             </button>
           </div>
         </div>
+      )}
 
-        {/* Availability Notification Toast */}
-        {availabilityMessage && (
-          <div className="max-w-7xl mx-auto mt-4">
-            <div className="bg-[#245b43] text-emerald-100 text-xs px-4 py-2.5 rounded-lg border border-emerald-500/30 flex items-center justify-between">
-              <span>{availabilityMessage}</span>
-              <button
-                type="button"
-                onClick={() => setAvailabilityMessage(null)}
-                className="text-white hover:text-emerald-200 ml-4 cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* Main Content Area: Sidebar Filter + Catalog Grid */}
-      <main className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-12 py-10">
+      {/* MAIN CONTENT AREA */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-12 py-5 lg:py-10">
         <div className="flex flex-col md:flex-row items-start gap-8">
-          {/* Left Sidebar Filter */}
-          <aside className="w-full md:w-56 shrink-0">
+
+          {/* DESKTOP SIDEBAR FILTER (hidden on mobile) */}
+          <aside className="hidden md:block w-56 shrink-0">
             <div className="bg-white rounded-xl border border-gray-100 p-5 shadow-xs space-y-6">
-              {/* Filter Header with optional Reset link */}
               <div className="flex items-center justify-between">
-                <h2 className="font-bold text-gray-900 text-sm tracking-tight">
-                  Filter
-                </h2>
+                <h2 className="font-bold text-gray-900 text-sm tracking-tight">Filter</h2>
                 {isFilterActive && (
                   <button
                     type="button"
@@ -293,11 +490,9 @@ function KatalogContent() {
                 )}
               </div>
 
-              {/* Kategori Section */}
+              {/* Kategori */}
               <div>
-                <h3 className="font-semibold text-xs text-gray-900 mb-3">
-                  Kategori
-                </h3>
+                <h3 className="font-semibold text-xs text-gray-900 mb-3">Kategori</h3>
                 <div className="space-y-2.5 text-xs">
                   {categoryOptions.map((cat) => {
                     const isChecked = selectedCategories.includes(cat.id);
@@ -324,21 +519,19 @@ function KatalogContent() {
                             {cat.label}
                           </span>
                         </div>
-                        <span className="text-gray-400 text-xs font-normal">
-                          {cat.count}
-                        </span>
+                        <span className="text-gray-400 text-xs font-normal">{cat.count}</span>
                       </div>
                     );
                   })}
                 </div>
               </div>
 
-              {/* Harga / hari Section */}
+              {/* Harga / hari */}
               <div>
                 <div className="flex items-center justify-between text-xs font-semibold text-gray-900 mb-2">
                   <span>Harga / hari</span>
                   <span className="text-[#2d6a4f] font-bold text-[11px]">
-                    ≤ Rp {maxPrice.toLocaleString("id-ID")}
+                    &#8804; Rp {maxPrice.toLocaleString("id-ID")}
                   </span>
                 </div>
                 <div className="space-y-2">
@@ -361,11 +554,9 @@ function KatalogContent() {
                 </div>
               </div>
 
-              {/* Ketersediaan Section */}
+              {/* Ketersediaan */}
               <div>
-                <h3 className="font-semibold text-xs text-gray-900 mb-2.5">
-                  Ketersediaan
-                </h3>
+                <h3 className="font-semibold text-xs text-gray-900 mb-2.5">Ketersediaan</h3>
                 <div className="space-y-2 text-xs">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
@@ -403,11 +594,13 @@ function KatalogContent() {
             </div>
           </aside>
 
-          {/* Right Product Grid (3 Columns) */}
+          {/* PRODUCT GRID */}
           <div className="flex-1 w-full">
             <div className="flex items-center justify-between mb-4">
               <p className="text-xs text-gray-500 font-medium">
-                Menampilkan <span className="font-bold text-gray-900">{filteredProducts.length}</span> item alat
+                Menampilkan{" "}
+                <span className="font-bold text-gray-900">{filteredProducts.length}</span>{" "}
+                item alat
               </p>
               {isFilterActive && (
                 <span className="text-[11px] bg-emerald-50 text-[#2d6a4f] px-2 py-0.5 rounded-md font-medium border border-emerald-100">
@@ -417,7 +610,8 @@ function KatalogContent() {
             </div>
 
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              /* Mobile: 2 columns | sm: 2 columns | lg: 3 columns */
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
                 {filteredProducts.map((p) => (
                   <ProductCard
                     key={p.id}
@@ -438,7 +632,10 @@ function KatalogContent() {
                 </p>
                 <button
                   type="button"
-                  onClick={handleResetFilter}
+                  onClick={() => {
+                    handleResetFilter();
+                    setActiveTab("semua");
+                  }}
                   className="mt-4 px-4 py-2 bg-[#2d6a4f] text-white text-xs font-semibold rounded-lg hover:bg-[#23583c] transition-colors cursor-pointer"
                 >
                   Reset Filter
@@ -449,12 +646,13 @@ function KatalogContent() {
         </div>
       </main>
 
-      {/* Booking Form Modal matching user's design image */}
+      {/* BOOKING MODAL */}
       {selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-100 max-h-[92vh]">
-            {/* Left Column: Product Image */}
-            <div className="w-full md:w-1/2 min-h-[220px] md:min-h-full shrink-0 relative bg-gray-100 overflow-hidden flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white w-full max-w-sm sm:max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col md:flex-row border border-gray-100 max-h-[90vh]">
+
+            {/* Left Column: Product Image - hidden on mobile, shown on md+ */}
+            <div className="hidden md:flex w-full md:w-1/2 min-h-[220px] md:min-h-full shrink-0 relative bg-gray-100 overflow-hidden items-center justify-center">
               {selectedProduct.image ? (
                 <img
                   src={selectedProduct.image}
@@ -462,22 +660,22 @@ function KatalogContent() {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div
-                  className={`${selectedProduct.bgPastel} w-full h-full min-h-[200px]`}
-                />
+                <div className={`${selectedProduct.bgPastel} w-full h-full min-h-[200px]`} />
               )}
             </div>
 
             {/* Right Column: Content */}
-            <div className="w-full md:w-1/2 p-6 sm:p-8 flex flex-col justify-between overflow-y-auto">
+            <div className="w-full md:w-1/2 p-5 sm:p-6 lg:p-8 flex flex-col justify-between overflow-y-auto">
+
+
               {bookingSuccess ? (
-                <div className="text-center py-8 space-y-4 my-auto">
-                  <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-                    <CheckCircle2 className="w-8 h-8" />
+                <div className="text-center py-6 space-y-4 my-auto">
+                  <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+                    <CheckCircle2 className="w-7 h-7" />
                   </div>
                   <div>
-                    <h4 className="text-xl font-bold text-gray-900">
-                      Booking Berhasil Dikonfirmasi!
+                    <h4 className="text-lg font-bold text-gray-900">
+                      Booking Berhasil!
                     </h4>
                     <p className="text-xs text-gray-500 mt-1">
                       Kode booking Anda:{" "}
@@ -487,7 +685,8 @@ function KatalogContent() {
                     </p>
                   </div>
                   <p className="text-xs text-gray-600 bg-gray-50 p-3 rounded-xl border border-gray-100">
-                    Booking telah dicatat di tabel <strong>Sewa Saya</strong>. Silakan pantau perkembangannya melalui halaman <strong>Status Booking</strong>.
+                    Booking telah dicatat di tabel <strong>Sewa Saya</strong>. Pantau
+                    perkembangan melalui halaman <strong>Status Booking</strong>.
                   </p>
                   <div className="pt-2 flex flex-col sm:flex-row gap-3">
                     <button
@@ -526,13 +725,26 @@ function KatalogContent() {
                     </button>
                   </div>
 
-                  {/* Title & Category with ID */}
+                  {/* Product image — only on mobile */}
+                  <div className="md:hidden w-full h-40 rounded-xl overflow-hidden bg-gray-100">
+                    {selectedProduct.image ? (
+                      <img
+                        src={selectedProduct.image}
+                        alt={selectedProduct.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className={`${selectedProduct.bgPastel} w-full h-full`} />
+                    )}
+                  </div>
+
+                  {/* Title & Category */}
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+                    <h2 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
                       {selectedProduct.name}
                     </h2>
                     <p className="text-xs text-gray-400 mt-1 font-normal">
-                      {selectedProduct.categoryLabel} · ID {selectedProduct.codeId}
+                      {selectedProduct.categoryLabel} &#183; ID {selectedProduct.codeId}
                     </p>
                   </div>
 
@@ -546,8 +758,8 @@ function KatalogContent() {
                     ))}
                   </div>
 
-                  {/* Dates: Tanggal ambil & Tanggal kembali */}
-                  <div className="grid grid-cols-2 gap-3.5 pt-1">
+                  {/* Dates */}
+                  <div className="grid grid-cols-2 gap-3 pt-1">
                     <div>
                       <label className="block text-xs font-semibold text-gray-700 mb-1.5">
                         Tanggal ambil
@@ -556,7 +768,7 @@ function KatalogContent() {
                         type="text"
                         value={modalPickupDate}
                         onChange={(e) => setModalPickupDate(e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-3.5 py-2 text-xs text-gray-700 focus:outline-none focus:border-[#2d6a4f]"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:border-[#2d6a4f]"
                       />
                     </div>
                     <div>
@@ -567,13 +779,13 @@ function KatalogContent() {
                         type="text"
                         value={modalReturnDate}
                         onChange={(e) => setModalReturnDate(e.target.value)}
-                        className="w-full border border-gray-200 rounded-lg px-3.5 py-2 text-xs text-gray-700 focus:outline-none focus:border-[#2d6a4f]"
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:border-[#2d6a4f]"
                       />
                     </div>
                   </div>
 
                   {/* Calculation Card */}
-                  <div className="bg-[#f8fafc] border border-gray-100 rounded-xl p-4 space-y-2 mt-4">
+                  <div className="bg-[#f8fafc] border border-gray-100 rounded-xl p-4 space-y-2">
                     <div className="flex items-center justify-between text-xs text-gray-500">
                       <span>Total hari</span>
                       <span className="font-bold text-gray-900">{modalDays} hari</span>
@@ -585,10 +797,8 @@ function KatalogContent() {
                       </span>
                     </div>
                     <div className="border-t border-dashed border-gray-200 pt-2.5 mt-2 flex items-center justify-between">
-                      <span className="font-bold text-sm sm:text-base text-[#1b4332]">
-                        Total Bayar
-                      </span>
-                      <span className="font-extrabold text-base sm:text-lg text-[#1b4332]">
+                      <span className="font-bold text-sm text-[#1b4332]">Total Bayar</span>
+                      <span className="font-extrabold text-base text-[#1b4332]">
                         Rp {(selectedProduct.price * modalDays).toLocaleString("id-ID")}
                       </span>
                     </div>
@@ -599,7 +809,7 @@ function KatalogContent() {
                     type="button"
                     onClick={handleBookingSubmit}
                     disabled={!selectedProduct.available}
-                    className="w-full py-3 bg-[#2d6a4f] hover:bg-[#23583c] disabled:bg-gray-300 text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors cursor-pointer shadow-xs active:scale-[0.99] mt-2"
+                    className="w-full py-3 bg-[#2d6a4f] hover:bg-[#23583c] disabled:bg-gray-300 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
                   >
                     Konfirmasi Booking
                   </button>

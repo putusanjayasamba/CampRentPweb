@@ -7,7 +7,7 @@ import { INITIAL_STOCK_ITEMS, EquipmentStockItem } from "@/data/adminData";
 function getStatusBadge(status: EquipmentStockItem["status"]) {
   switch (status) {
     case "Tersedia":
-      return "bg-[#e6f4ea] text-[#1e7e34]";
+      return "bg-[#e8f5e9] text-[#286043]";
     case "Menipis":
       return "bg-[#fef3e9] text-[#c2410c]";
     case "Habis":
@@ -15,6 +15,15 @@ function getStatusBadge(status: EquipmentStockItem["status"]) {
     default:
       return "bg-gray-100 text-gray-600";
   }
+}
+
+function getItemEmoji(item: EquipmentStockItem) {
+  if (item.name.toLowerCase().includes("matras") || item.iconType === "matras") return "🧘";
+  if (item.category === "Tenda" || item.iconType === "tent") return "⛺";
+  if (item.category === "Sleeping Gear" || item.iconType === "sleeping") return "🛏️";
+  if (item.category === "Cooking" || item.iconType === "stove") return "🍳";
+  if (item.category === "Lighting" || item.iconType === "light") return "💡";
+  return "🎒";
 }
 
 function ItemIcon({
@@ -104,7 +113,7 @@ export default function AdminStokPage() {
   // Modal delete states
   const [itemToDelete, setItemToDelete] = useState<EquipmentStockItem | null>(null);
 
-  const categories = ["Semua", "Tenda", "Sleeping Gear", "Cooking", "Lighting"];
+  const categories = ["Semua", "Tenda", "Cooking", "Sleeping Gear", "Lighting"];
 
   const filteredItems = useMemo(() => {
     return stockItems.filter((item) => {
@@ -228,43 +237,47 @@ export default function AdminStokPage() {
   };
 
   return (
-    <div className="space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto pb-10">
       {/* Title & Action Button */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">
-          Manajemen Stok Alat
+          <span className="lg:hidden">Stok Alat</span>
+          <span className="hidden lg:inline">Manajemen Stok Alat</span>
         </h1>
 
         <button
           type="button"
           onClick={handleOpenAdd}
-          className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#286043] hover:bg-[#1e4a33] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs self-start sm:self-auto"
+          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 sm:px-4 sm:py-2 bg-[#286043] hover:bg-[#1e4a33] text-white text-xs sm:text-sm font-semibold rounded-lg transition-colors cursor-pointer shadow-xs shrink-0"
         >
           <Plus className="w-3.5 h-3.5" />
-          <span>Tambah Alat</span>
+          <span className="lg:hidden">Tambah</span>
+          <span className="hidden lg:inline">Tambah Alat</span>
         </button>
       </div>
 
-      {/* Search Input & Category Filters */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative">
-          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-2.5" />
+      {/* Search Input & Category Filters: sebaris horizontal di desktop, bertumpuk di mobile */}
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+        {/* Search Input */}
+        <div className="relative w-full lg:w-64 shrink-0">
+          <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-2.5 lg:top-3" />
           <input
             type="text"
             placeholder="Cari nama alat..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="text-xs border border-gray-200 bg-white rounded-xl pl-9 pr-4 py-2 w-60 sm:w-64 focus:outline-none focus:border-[#286043] shadow-2xs"
+            className="w-full text-xs sm:text-sm border border-gray-200 bg-white rounded-xl pl-9 pr-4 py-2 lg:py-2 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#286043] shadow-2xs"
           />
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* Category Pills (horizontal scrollable on mobile, inline on desktop) */}
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1 lg:py-0">
           {categories.map((cat) => (
             <button
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer shrink-0 ${
                 selectedCategory === cat
                   ? "bg-[#286043] text-white shadow-xs"
                   : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200"
@@ -276,8 +289,95 @@ export default function AdminStokPage() {
         </div>
       </div>
 
-      {/* Main Stock Table */}
-      <div className="bg-white rounded-2xl border border-gray-200/80 overflow-hidden shadow-xs">
+      {/* ── MOBILE VIEW: CARD LIST (< lg) ── */}
+      <div className="space-y-3 lg:hidden">
+        {filteredItems.length === 0 ? (
+          <div className="bg-white rounded-2xl border border-gray-200/80 p-8 text-center text-gray-500 text-xs">
+            Tidak ada alat yang cocok dengan filter atau pencarian.
+          </div>
+        ) : (
+          filteredItems.map((item) => (
+            <div
+              key={item.idDoc}
+              className="bg-white rounded-2xl border border-gray-200/90 p-4 shadow-2xs space-y-2.5 transition-all"
+            >
+              {/* Top row: Emoji + Name & Status Badge */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-base shrink-0 leading-none">
+                    {getItemEmoji(item)}
+                  </span>
+                  <h3 className="font-bold text-gray-900 text-sm truncate">
+                    {item.name}
+                  </h3>
+                </div>
+                <span
+                  className={`shrink-0 px-3 py-0.5 rounded-full text-[11px] font-semibold ${getStatusBadge(
+                    item.status
+                  )}`}
+                >
+                  {item.status}
+                </span>
+              </div>
+
+              {/* Middle row: Category · Stock · Price */}
+              <div className="text-xs text-gray-500 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
+                <span>{item.category}</span>
+                <span className="text-gray-300 font-bold">·</span>
+                <span>Stok {item.stock}</span>
+                <span className="text-gray-300 font-bold">·</span>
+                <span>Rp {item.pricePerDay.toLocaleString("id-ID")}/hari</span>
+              </div>
+
+              {/* Bottom row: Edit & Hapus Buttons */}
+              <div className="flex items-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => handleOpenEdit(item)}
+                  className="px-4 py-1.5 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 text-xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
+                >
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setItemToDelete(item)}
+                  className="px-4 py-1.5 bg-[#b83828] hover:bg-[#a53022] text-white text-xs font-semibold rounded-lg shadow-2xs transition-colors cursor-pointer"
+                >
+                  Hapus
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+
+        {/* Mobile Pagination Info */}
+        <div className="bg-white rounded-2xl border border-gray-200/90 p-3.5 flex items-center justify-between text-xs text-gray-500 shadow-2xs">
+          <span>{filteredItems.length} alat</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              className="px-2.5 py-1 rounded-md border border-gray-200 text-gray-400 bg-white cursor-pointer"
+            >
+              ‹
+            </button>
+            <button
+              type="button"
+              className="px-3 py-1 rounded-md bg-[#286043] text-white font-bold cursor-pointer"
+            >
+              1
+            </button>
+            <button
+              type="button"
+              className="px-2.5 py-1 rounded-md border border-gray-200 text-gray-700 hover:bg-gray-50 bg-white cursor-pointer"
+            >
+              ›
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ── DESKTOP VIEW: MAIN TABLE (≥ lg) ── */}
+      <div className="hidden lg:block bg-white rounded-2xl border border-gray-200/80 overflow-hidden shadow-xs">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-[#eff1f3] text-gray-400 font-medium">
@@ -406,13 +506,13 @@ export default function AdminStokPage() {
         </div>
       </div>
 
-      {/* MODAL 1: Tambah / Edit Alat Baru (Image 2 Left Modal) */}
+      {/* MODAL 1: Tambah / Edit Alat Baru */}
       {isFormModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
           <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden border border-gray-100 flex flex-col max-h-[92vh]">
             {/* Modal Header */}
-            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+            <div className="px-5 sm:px-6 py-4 sm:py-5 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900 tracking-tight">
                 {editingItem ? "Edit Alat" : "Tambah Alat Baru"}
               </h2>
               <button
@@ -425,7 +525,7 @@ export default function AdminStokPage() {
             </div>
 
             {/* Modal Form */}
-            <form onSubmit={handleSaveForm} className="p-5 sm:p-6 space-y-3.5 overflow-y-auto flex-1">
+            <form onSubmit={handleSaveForm} className="p-4 sm:p-6 space-y-3.5 overflow-y-auto flex-1">
               {/* Row 1: Nama Alat & Kategori */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
@@ -624,14 +724,13 @@ export default function AdminStokPage() {
         </div>
       )}
 
-      {/* MODAL 2: Konfirmasi Hapus Alat (Image 2 Right Modal) */}
+      {/* MODAL 2: Konfirmasi Hapus Alat */}
       {itemToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in">
           <div className="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 sm:p-7 border border-gray-100 flex flex-col items-center text-center">
             {/* Trash Basket Illustration */}
             <div className="w-16 h-16 flex items-center justify-center mb-2">
               <svg viewBox="0 0 64 64" className="w-16 h-16" fill="none">
-                {/* Wastebasket mesh illustration */}
                 <ellipse
                   cx="32"
                   cy="14"
@@ -641,7 +740,6 @@ export default function AdminStokPage() {
                   strokeWidth="1.5"
                   fill="#f1f5f9"
                 />
-                {/* Crumpled paper inside */}
                 <path
                   d="M26 13 C26 9, 38 9, 38 13 Z"
                   fill="#e2e8f0"
@@ -649,7 +747,6 @@ export default function AdminStokPage() {
                   strokeWidth="1"
                 />
                 <ellipse cx="32" cy="14" rx="16" ry="4" fill="#ffffff" />
-                {/* Basket body */}
                 <path
                   d="M14 14 L19 50 C19 53, 45 53, 45 50 L50 14"
                   stroke="#475569"
@@ -665,7 +762,6 @@ export default function AdminStokPage() {
                   strokeWidth="1.5"
                   fill="#cbd5e1"
                 />
-                {/* Mesh wires */}
                 <line
                   x1="16"
                   y1="22"
