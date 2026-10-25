@@ -13,6 +13,7 @@ export interface Product {
   available: boolean;
   stock: number;
   bgPastel: string;
+  image?: string;
   type: "tent" | "sleeping" | "stove" | "light" | "backpack" | "nesting";
   specs: ProductSpec[];
 }
@@ -21,6 +22,7 @@ export interface BookingRecord {
   code: string;
   items: string;
   shortItems?: string;
+  detailItems?: string;
   period: string;
   startDate: string;
   endDate: string;
@@ -45,6 +47,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     available: true,
     stock: 3,
     bgPastel: "bg-[#9dc4b1]",
+    image: "/TendaDome4orang.jpg",
     type: "tent",
     specs: [
       { label: "Kapasitas", value: "4 orang" },
@@ -63,6 +66,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     available: true,
     stock: 5,
     bgPastel: "bg-[#ecd292]",
+    image: "/SleepingBagMummy.jpg",
     type: "sleeping",
     specs: [
       { label: "Kapasitas", value: "1 orang" },
@@ -81,6 +85,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     available: false,
     stock: 0,
     bgPastel: "bg-[#f2a99b]",
+    image: "/KomporPortabel.jpg",
     type: "stove",
     specs: [
       { label: "Bahan", value: "Stainless Steel" },
@@ -99,6 +104,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     available: true,
     stock: 8,
     bgPastel: "bg-[#9fc3d9]",
+    image: "/LampuLed.jpg",
     type: "light",
     specs: [
       { label: "Baterai", value: "2400 mAh" },
@@ -117,6 +123,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     available: true,
     stock: 4,
     bgPastel: "bg-[#c9bfdb]",
+    image: "/TasCarrier60L.jpg",
     type: "backpack",
     specs: [
       { label: "Kapasitas", value: "60 Liter" },
@@ -135,6 +142,7 @@ export const INITIAL_PRODUCTS: Product[] = [
     available: true,
     stock: 6,
     bgPastel: "bg-[#ccd99f]",
+    image: "/SetNestingMasak.jpg",
     type: "nesting",
     specs: [
       { label: "Isi set", value: "2 Panci + 1 Wajan" },
@@ -148,7 +156,8 @@ export const INITIAL_PRODUCTS: Product[] = [
 export const INITIAL_BOOKINGS: BookingRecord[] = [
   {
     code: "BK-0128",
-    items: "Tenda Dome 4 Orang, Lampu Tenda LED",
+    items: "Tenda Dome 4 Orang, Lampu LED",
+    detailItems: "Tenda Dome 4 Orang, Lampu Tenda LED",
     shortItems: "Tenda Dome 4P, Lampu LED",
     period: "28–30 Sep 2026",
     startDate: "28 Sep 2026",
@@ -214,7 +223,7 @@ export const INITIAL_BOOKINGS: BookingRecord[] = [
   },
   {
     code: "BK-0117",
-    items: "Carrier 60L Osprey Volt",
+    items: "Carrier 60L",
     shortItems: "Carrier 60L",
     period: "14–17 Sep 2026",
     startDate: "14 Sep 2026",
@@ -247,7 +256,7 @@ export const INITIAL_BOOKINGS: BookingRecord[] = [
   },
   {
     code: "BK-0102",
-    items: "Set Nesting Masak DS-308",
+    items: "Set Nesting Masak",
     shortItems: "Set Nesting Masak",
     period: "02–04 Sep 2026",
     startDate: "02 Sep 2026",
@@ -279,3 +288,27 @@ export const INITIAL_BOOKINGS: BookingRecord[] = [
     ],
   },
 ];
+
+export function getStoredBookings(): BookingRecord[] {
+  if (typeof window !== "undefined") {
+    try {
+      const data = localStorage.getItem("camprent_bookings");
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+  return INITIAL_BOOKINGS;
+}
+
+export function saveStoredBookings(bookings: BookingRecord[]) {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem("camprent_bookings", JSON.stringify(bookings));
+    } catch (e) {
+      console.error(e);
+    }
+  }
+}

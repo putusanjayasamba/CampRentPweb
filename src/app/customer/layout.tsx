@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import Navbar from "@/components/Navbar";
 
 export const metadata = {
@@ -12,8 +12,10 @@ export default function CustomerLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[#f8f9fa] flex flex-col font-sans text-gray-800">
-      <Navbar />
+    <div className="min-h-screen bg-white flex flex-col font-sans text-gray-800">
+      <Suspense fallback={<div className="bg-[#1b4332] h-14" />}>
+        <Navbar />
+      </Suspense>
       <main className="flex-1">{children}</main>
     </div>
   );
