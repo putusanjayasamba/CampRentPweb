@@ -148,8 +148,10 @@ export default function Sidebar({
         </h1>
 
         {/* Avatar */}
-        <div className="w-8 h-8 rounded-full bg-[#e07a2c] text-white text-xs font-bold flex items-center justify-center shadow-xs">
-          IB
+        <div className={`w-8 h-8 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-xs ${
+          isStaff ? "bg-[#1e5c36]" : "bg-[#e07a2c]"
+        }`}>
+          {isStaff ? "PS" : "IB"}
         </div>
       </div>
 
