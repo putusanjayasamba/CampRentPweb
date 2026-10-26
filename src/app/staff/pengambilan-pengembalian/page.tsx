@@ -7,9 +7,10 @@ import { INITIAL_STAFF_BOOKINGS, BookingOps } from "@/data/staffData";
 interface ConditionPanelProps {
   booking: BookingOps;
   onSave: (data: { kondisi: string; denda: number; catatan: string }) => void;
+  onClose?: () => void;
 }
 
-function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
+function ConditionPanel({ booking, onSave, onClose }: ConditionPanelProps) {
   const [kondisi, setKondisi] = useState<"Baik" | "Rusak Ringan" | "Rusak Berat" | "Hilang">("Rusak Ringan");
   const [kelengkapan, setKelengkapan] = useState(true);
   const [tidakSobekan, setTidakSobekan] = useState(true);
@@ -47,16 +48,30 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
   };
 
   return (
-    <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4 text-sm overflow-y-auto max-h-[calc(100vh-120px)]">
-      {/* Header */}
-      <div>
-        <h3 className="font-bold text-gray-900 text-base">
-          Cek Kondisi Fisik · {booking.kode}
-        </h3>
-        <p className="text-xs text-gray-500 mt-0.5">
-          {booking.alat} · {booking.customer}
-        </p>
+    <div className="bg-white border border-gray-200 rounded-xl text-sm flex flex-col h-full">
+      {/* Header sticky */}
+      <div className="flex items-start justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+        <div>
+          <h3 className="font-bold text-gray-900 text-sm">
+            Cek Kondisi Fisik · {booking.kode}
+          </h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {booking.alat} · {booking.customer}
+          </p>
+        </div>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Tutup panel"
+            className="ml-2 mt-0.5 w-7 h-7 rounded-lg border border-gray-200 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer lg:hidden"
+          >
+            ✕
+          </button>
+        )}
       </div>
+      {/* Body scrollable */}
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
 
       {/* Kondisi Alat */}
       <div>
@@ -153,8 +168,8 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
 
       {/* Skema Info */}
       <p className="text-[10px] text-gray-400 leading-relaxed">
-        Skema kondisi: Baik 0% · Rusak Ringan 20% · Rusak Berat 50% · Hilang 100% dari nilai alat.
-        Skema keterlambatan: 10% dari total harga sewa per 1 jam telat, berlaku untuk seluruh alat dalam booking.
+        Skema: Baik 0% · Rusak Ringan 20% · Rusak Berat 50% · Hilang 100% dari nilai alat.
+        Keterlambatan 10% dari total sewa per jam.
       </p>
 
       {/* Catatan Petugas */}
@@ -163,7 +178,7 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
         <textarea
           value={catatan}
           onChange={(e) => setCatatan(e.target.value)}
-          placeholder="Tambahkan catatan kondisi..."
+          placeholder="Catatan petugas..."
           rows={2}
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-700 focus:outline-none focus:border-[#1e5c36] resize-none"
         />
@@ -179,26 +194,94 @@ function ConditionPanel({ booking, onSave }: ConditionPanelProps) {
           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-xs text-gray-800 font-bold focus:outline-none focus:border-[#1e5c36]"
         />
       </div>
+      </div>{/* end body */}
 
-      {/* Simpan Button */}
-      <button
-        type="button"
-        onClick={handleSave}
-        className={`w-full py-3 rounded-xl text-sm font-bold transition-all cursor-pointer ${
-          saved
-            ? "bg-emerald-700 text-white"
-            : "bg-[#1e5c36] hover:bg-[#164327] text-white"
-        }`}
-      >
-        {saved ? "✓ Berhasil Disimpan!" : "Simpan & Tandai Completed"}
-      </button>
+      {/* Footer sticky – tombol simpan */}
+      <div className="px-5 pb-5 pt-3 shrink-0 border-t border-gray-100">
+        <button
+          type="button"
+          onClick={handleSave}
+          className={`w-full py-3 rounded-xl text-sm font-bold transition-all cursor-pointer ${
+            saved
+              ? "bg-emerald-700 text-white"
+              : "bg-[#1e5c36] hover:bg-[#164327] text-white"
+          }`}
+        >
+          {saved ? "✓ Berhasil Disimpan!" : "Simpan & Tandai Completed"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Kartu booking untuk tampilan mobile
+function BookingCard({
+  booking,
+  isSelected,
+  onVerifikasiPengambilan,
+  onTerimaKembali,
+}: {
+  booking: BookingOps;
+  isSelected: boolean;
+  onVerifikasiPengambilan: () => void;
+  onTerimaKembali: () => void;
+}) {
+  const statusColor =
+    booking.status === "Approved"
+      ? "bg-[#e0f2e9] text-[#1e5c36] border-[#a7e0bf]"
+      : booking.status === "Picked Up"
+      ? "bg-orange-50 text-orange-600 border-orange-200"
+      : "bg-gray-100 text-gray-500 border-gray-200";
+
+  return (
+    <div
+      className={`bg-white rounded-xl border transition-all ${
+        isSelected
+          ? "border-[#1e5c36] shadow-md shadow-emerald-100"
+          : "border-gray-200"
+      }`}
+    >
+      <div className="p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="font-bold text-gray-900 text-sm">{booking.kode}</p>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">
+              {booking.alat} · {booking.customer}
+            </p>
+            <p className="text-xs text-gray-400 mt-0.5">{booking.jadwal}</p>
+          </div>
+          <span className={`shrink-0 px-2.5 py-1 rounded-full text-xs font-semibold border ${statusColor}`}>
+            {booking.status}
+          </span>
+        </div>
+
+        {booking.status === "Approved" && (
+          <button
+            type="button"
+            onClick={onVerifikasiPengambilan}
+            className="mt-3 w-full py-2.5 rounded-xl bg-[#1e5c36] hover:bg-[#164327] text-white text-xs font-bold transition-colors cursor-pointer"
+          >
+            Verifikasi Pengambilan
+          </button>
+        )}
+        {booking.status === "Picked Up" && (
+          <button
+            type="button"
+            onClick={onTerimaKembali}
+            className="mt-3 w-full py-2.5 rounded-xl bg-[#f97316] hover:bg-[#ea580c] text-white text-xs font-bold transition-colors cursor-pointer"
+          >
+            Terima Pengembalian
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 export default function PengambilanPengembalianPage() {
   const [bookings, setBookings] = useState<BookingOps[]>(INITIAL_STAFF_BOOKINGS);
-  const [selectedBooking, setSelectedBooking] = useState<BookingOps | null>(INITIAL_STAFF_BOOKINGS[1]);
+  const [selectedBooking, setSelectedBooking] = useState<BookingOps | null>(null);
+  const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
   const handleSaveCondition = (data: { kondisi: string; denda: number; catatan: string }) => {
     if (!selectedBooking) return;
@@ -206,17 +289,35 @@ export default function PengambilanPengembalianPage() {
       prev.map((b) => (b.kode === selectedBooking.kode ? { ...b, status: "Completed" } : b))
     );
     setSelectedBooking(null);
+    setMobileSheetOpen(false);
+  };
+
+  const handleTerimaKembali = (booking: BookingOps) => {
+    setSelectedBooking(booking);
+    setMobileSheetOpen(true);
+  };
+
+  const handleVerifikasiPengambilan = (kode: string) => {
+    setBookings((prev) =>
+      prev.map((item) => (item.kode === kode ? { ...item, status: "Picked Up" } : item))
+    );
+  };
+
+  const handleClosePanel = () => {
+    setSelectedBooking(null);
+    setMobileSheetOpen(false);
   };
 
   return (
     <div className="flex flex-col lg:flex-row gap-6 h-full">
-      {/* Table Side */}
+      {/* ======== Kiri: Header + Daftar ======== */}
       <div className="flex-1 min-w-0 space-y-5">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-bold text-gray-900">Kelola Status Pesanan</h2>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Kelola Status Pesanan</h2>
 
           {/* Status flow pills */}
-          <div className="flex items-center gap-2 text-xs">
+          <div className="flex items-center gap-1.5 text-xs flex-wrap">
             <span className="px-3 py-1 rounded-full bg-[#e0f2e9] text-[#1e5c36] font-semibold border border-[#a7e0bf]">
               Approved
             </span>
@@ -231,8 +332,21 @@ export default function PengambilanPengembalianPage() {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        {/* ---- Mobile: Kartu (hidden di lg ke atas) ---- */}
+        <div className="flex flex-col gap-3 lg:hidden">
+          {bookings.map((b) => (
+            <BookingCard
+              key={b.kode}
+              booking={b}
+              isSelected={selectedBooking?.kode === b.kode}
+              onVerifikasiPengambilan={() => handleVerifikasiPengambilan(b.kode)}
+              onTerimaKembali={() => handleTerimaKembali(b)}
+            />
+          ))}
+        </div>
+
+        {/* ---- Desktop: Tabel (hidden di bawah lg) ---- */}
+        <div className="hidden lg:block bg-white border border-gray-200 rounded-xl overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm">
               <thead className="bg-[#f8fafc] text-gray-500 text-xs font-medium border-b border-gray-100">
@@ -276,13 +390,7 @@ export default function PengambilanPengembalianPage() {
                       {b.status === "Approved" && (
                         <button
                           type="button"
-                          onClick={() =>
-                            setBookings((prev) =>
-                              prev.map((item) =>
-                                item.kode === b.kode ? { ...item, status: "Picked Up" } : item
-                              )
-                            )
-                          }
+                          onClick={() => handleVerifikasiPengambilan(b.kode)}
                           className="px-3 py-1.5 rounded-lg bg-[#1e5c36] hover:bg-[#164327] text-white text-xs font-semibold transition-colors cursor-pointer"
                         >
                           Verifikasi Pengambilan
@@ -291,7 +399,7 @@ export default function PengambilanPengembalianPage() {
                       {b.status === "Picked Up" && (
                         <button
                           type="button"
-                          onClick={() => setSelectedBooking(b)}
+                          onClick={() => handleTerimaKembali(b)}
                           className="px-3 py-1.5 rounded-lg bg-[#f97316] hover:bg-[#ea580c] text-white text-xs font-semibold transition-colors cursor-pointer"
                         >
                           Terima Pengembalian
@@ -309,8 +417,11 @@ export default function PengambilanPengembalianPage() {
         </div>
       </div>
 
-      {/* Right Panel: Condition Inspection */}
-      <div className="w-full lg:w-80 shrink-0">
+      {/* ======== Kanan: Panel Kondisi – hanya desktop ======== */}
+      <div
+        className="hidden lg:flex w-80 shrink-0 flex-col"
+        style={{ maxHeight: "calc(100vh - 120px)" }}
+      >
         {selectedBooking ? (
           <ConditionPanel
             key={selectedBooking.kode}
@@ -318,7 +429,7 @@ export default function PengambilanPengembalianPage() {
             onSave={handleSaveCondition}
           />
         ) : (
-          <div className="bg-white border border-dashed border-gray-300 rounded-xl p-8 text-center text-xs text-gray-400">
+          <div className="bg-white border border-dashed border-gray-300 rounded-xl p-8 text-center text-xs text-gray-400 flex-1 flex items-center justify-center">
             <p>
               Pilih booking dengan status <strong>Picked Up</strong> untuk melakukan cek kondisi fisik
               dan denda pengembalian.
@@ -326,6 +437,33 @@ export default function PengambilanPengembalianPage() {
           </div>
         )}
       </div>
+
+      {/* ======== Mobile: Bottom Sheet Overlay ======== */}
+      {mobileSheetOpen && selectedBooking && (
+        <div className="fixed inset-0 z-50 lg:hidden flex flex-col justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={handleClosePanel}
+          />
+          {/* Sheet */}
+          <div
+            className="relative bg-white rounded-t-2xl shadow-2xl flex flex-col"
+            style={{ maxHeight: "90dvh" }}
+          >
+            {/* Drag indicator */}
+            <div className="flex justify-center pt-3 pb-1 shrink-0">
+              <div className="w-10 h-1 bg-gray-300 rounded-full" />
+            </div>
+            <ConditionPanel
+              key={selectedBooking.kode}
+              booking={selectedBooking}
+              onSave={handleSaveCondition}
+              onClose={handleClosePanel}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
