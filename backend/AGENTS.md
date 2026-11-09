@@ -1,0 +1,11 @@
+# Aturan proyek CampRent Backend
+- Stack: Node.js, Express, Mongoose, JWT (jsonwebtoken), bcryptjs, CommonJS (require)
+- Acuan utama: docs/primakara-af6-camprent-api-1_0_0-resolved-flattened.yaml
+- Struktur folder: models/, controllers/, routes/, middleware/
+- Prefix semua route: /api/v1
+- Format error selalu: { "message": "..." }
+- Kerjakan HANYA task yang diminta, jangan membuat fitur lain
+- Jangan membaca, menampilkan, atau mengubah isi file .env
+- Beri komentar singkat pada logika penting
+- Sebelum menulis kode, jelaskan rencana dan alasannya
+- Setelah selesai, tulis daftar file yang dibuat/diubah dan cara mengetesnya

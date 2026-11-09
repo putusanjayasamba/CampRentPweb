@@ -1,0 +1,1068 @@
+openapi: 3.0.3
+info:
+  title: CampRent API
+  description: |
+    REST API Sistem Booking dan Penyewaan Alat Camping (CampRent).
+    Backend: Node.js + Express.js, Database: MongoDB, Auth: JWT.
+
+    Role: `customer`, `admin`, `staff`.
+    Alur status booking: Pending -> Approved -> Picked Up -> Completed (atau Cancelled).
+  version: 1.0.0
+servers:
+- url: http://localhost:5000
+  description: Local development
+security:
+- bearerAuth: []
+tags:
+- name: Auth
+- name: Equipment
+- name: Bookings
+- name: Inspections
+- name: Users
+- name: Dashboard
+paths:
+  /api/v1/auth/register:
+    post:
+      tags:
+      - Auth
+      summary: Registrasi pengguna baru (role customer)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+        required: true
+      responses:
+        "201":
+          description: Registrasi berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: Email sudah terdaftar
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security: []
+  /api/v1/auth/login:
+    post:
+      tags:
+      - Auth
+      summary: Login dan generate JWT token
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+        required: true
+      responses:
+        "200":
+          description: Login berhasil
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Email atau password salah
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+      security: []
+  /api/v1/equipment:
+    get:
+      tags:
+      - Equipment
+      summary: "Daftar alat (pagination, pencarian, filter, sorting)"
+      parameters:
+      - name: q
+        in: query
+        description: Cari berdasarkan nama/kategori/ID
+        required: false
+        schema:
+          type: string
+      - name: category
+        in: query
+        required: false
+        schema:
+          $ref: "#/components/schemas/Category"
+      - name: maxPrice
+        in: query
+        description: Harga sewa per hari maksimum
+        required: false
+        schema:
+          type: number
+      - name: available
+        in: query
+        description: true = hanya alat dengan stok tersedia
+        required: false
+        schema:
+          type: boolean
+      - name: sort
+        in: query
+        description: "Contoh: pricePerDay atau -pricePerDay"
+        required: false
+        schema:
+          type: string
+      - name: page
+        in: query
+        required: false
+        schema:
+          minimum: 1
+          type: integer
+          default: 1
+      - name: limit
+        in: query
+        required: false
+        schema:
+          minimum: 1
+          type: integer
+          default: 10
+      responses:
+        "200":
+          description: Daftar alat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags:
+      - Equipment
+      summary: Tambah alat baru (Admin)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EquipmentInput"
+        required: true
+      responses:
+        "201":
+          description: Alat dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Equipment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/equipment/availability:
+    get:
+      tags:
+      - Equipment
+      summary: Cek ketersediaan alat pada rentang tanggal
+      parameters:
+      - name: start
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+          example: 2026-09-28
+      - name: end
+        in: query
+        required: true
+        schema:
+          type: string
+          format: date
+          example: 2026-09-30
+      responses:
+        "200":
+          description: Alat beserta stok tersisa pada rentang tanggal
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  allOf:
+                  - $ref: "#/components/schemas/Equipment"
+                  - type: object
+                    properties:
+                      availableStock:
+                        type: integer
+                        example: 3
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+  /api/v1/equipment/{id}:
+    put:
+      tags:
+      - Equipment
+      summary: Ubah data alat (Admin)
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EquipmentInput"
+        required: true
+      responses:
+        "200":
+          description: Alat diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Equipment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags:
+      - Equipment
+      summary: Hapus alat (Admin)
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      responses:
+        "200":
+          description: Alat dihapus
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Message"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/bookings:
+    get:
+      tags:
+      - Bookings
+      summary: Daftar booking
+      description: Customer melihat booking miliknya; Admin/Staff melihat seluruh booking.
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          $ref: "#/components/schemas/BookingStatus"
+      - name: page
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 1
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          default: 10
+      responses:
+        "200":
+          description: Daftar booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_200_1"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+    post:
+      tags:
+      - Bookings
+      summary: Buat booking baru berstatus Pending (Customer)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingCreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Booking dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/inline_response_201"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Stok tidak cukup
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /api/v1/bookings/{id}:
+    get:
+      tags:
+      - Bookings
+      summary: Detail booking beserta timeline status
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      responses:
+        "200":
+          description: Detail booking
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/bookings/{id}/cancel:
+    patch:
+      tags:
+      - Bookings
+      summary: Batalkan booking yang masih Pending (Customer)
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      responses:
+        "200":
+          $ref: "#/components/responses/BookingUpdated"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/bookings/{id}/approve:
+    patch:
+      tags:
+      - Bookings
+      summary: Setujui booking (Admin)
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      responses:
+        "200":
+          $ref: "#/components/responses/BookingUpdated"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/bookings/{id}/reject:
+    patch:
+      tags:
+      - Bookings
+      summary: "Tolak booking, status menjadi Cancelled (Admin)"
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      responses:
+        "200":
+          $ref: "#/components/responses/BookingUpdated"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/bookings/{id}/pay:
+    patch:
+      tags:
+      - Bookings
+      summary: Tandai booking sebagai Lunas (Admin)
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      responses:
+        "200":
+          $ref: "#/components/responses/BookingUpdated"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/bookings/{id}/pickup:
+    patch:
+      tags:
+      - Bookings
+      summary: "Catat pengambilan alat, status Picked Up (Staff)"
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      responses:
+        "200":
+          $ref: "#/components/responses/BookingUpdated"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /api/v1/bookings/{id}/return:
+    post:
+      tags:
+      - Bookings
+      summary: "Proses pengembalian + inspeksi, hitung denda, status Completed (Staff)"
+      description: |
+        Denda otomatis = persentase nilai alat sesuai kondisi
+        (Baik 0%, Rusak Ringan 20%, Rusak Berat 50%, Hilang 100%)
+        + 10% dari total sewa per jam keterlambatan.
+        Staff dapat menyesuaikan nominal denda akhir lewat `fine`.
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReturnRequest"
+        required: true
+      responses:
+        "201":
+          description: "Inspeksi tersimpan, booking Completed"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Inspection"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/inspections:
+    get:
+      tags:
+      - Inspections
+      summary: Riwayat inspeksi pengembalian (Staff/Admin)
+      responses:
+        "200":
+          description: Daftar inspeksi
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Inspection"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/users:
+    get:
+      tags:
+      - Users
+      summary: Daftar pengguna (Admin)
+      responses:
+        "200":
+          description: Daftar pengguna
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags:
+      - Users
+      summary: Tambah pengguna baru (Admin)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserCreateRequest"
+        required: true
+      responses:
+        "201":
+          description: Pengguna dibuat
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /api/v1/users/{id}:
+    patch:
+      tags:
+      - Users
+      summary: Ubah role atau status pengguna (Admin)
+      parameters:
+      - name: id
+        in: path
+        description: ObjectId MongoDB
+        required: true
+        schema:
+          type: string
+          example: 6500a1b2c3d4e5f678909999
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/users_id_body"
+        required: true
+      responses:
+        "200":
+          description: Pengguna diperbarui
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /api/v1/dashboard/summary:
+    get:
+      tags:
+      - Dashboard
+      summary: Ringkasan statistik dashboard (Admin)
+      responses:
+        "200":
+          description: Ringkasan statistik
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Pesan error
+    Message:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Berhasil
+    Role:
+      type: string
+      enum:
+      - customer
+      - admin
+      - staff
+    Category:
+      type: string
+      enum:
+      - Tenda
+      - Sleeping Gear
+      - Cooking
+      - Lighting
+      - Carrier
+    BookingStatus:
+      type: string
+      enum:
+      - Pending
+      - Approved
+      - Picked Up
+      - Completed
+      - Cancelled
+    RegisterRequest:
+      required:
+      - confirmPassword
+      - email
+      - name
+      - password
+      type: object
+      properties:
+        name:
+          type: string
+          example: Customer
+        email:
+          type: string
+          format: email
+          example: customer@gmail.com
+        password:
+          minLength: 6
+          type: string
+          example: password123
+        confirmPassword:
+          type: string
+          example: password123
+    LoginRequest:
+      required:
+      - email
+      - password
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          example: customer@gmail.com
+        password:
+          type: string
+          example: password123
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        user:
+          $ref: "#/components/schemas/LoginResponse_user"
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: 6500a1b2c3d4e5f678901234
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: "#/components/schemas/Role"
+        status:
+          type: string
+          enum:
+          - Aktif
+          - Nonaktif
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    UserCreateRequest:
+      required:
+      - email
+      - name
+      - password
+      - role
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          minLength: 6
+          type: string
+        role:
+          $ref: "#/components/schemas/Role"
+    EquipmentInput:
+      required:
+      - category
+      - name
+      - pricePerDay
+      - stock
+      type: object
+      properties:
+        name:
+          type: string
+          example: Tenda Dome 4 Orang
+        category:
+          $ref: "#/components/schemas/Category"
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        specs:
+          type: array
+          items:
+            $ref: "#/components/schemas/EquipmentInput_specs"
+        stock:
+          minimum: 0
+          type: integer
+          example: 5
+        pricePerDay:
+          type: number
+          example: 75000
+        totalValue:
+          type: number
+          description: Nilai alat (dasar perhitungan denda)
+          example: 900000
+    Equipment:
+      allOf:
+      - $ref: "#/components/schemas/EquipmentInput"
+      - type: object
+        properties:
+          _id:
+            type: string
+            example: 6500a1b2c3d4e5f678905678
+          status:
+            type: string
+            enum:
+            - Tersedia
+            - Menipis
+            - Habis
+          createdAt:
+            type: string
+            format: date-time
+          updatedAt:
+            type: string
+            format: date-time
+    BookingCreateRequest:
+      required:
+      - endDate
+      - items
+      - location
+      - startDate
+      type: object
+      properties:
+        items:
+          minItems: 1
+          type: array
+          items:
+            $ref: "#/components/schemas/BookingCreateRequest_items"
+        startDate:
+          type: string
+          format: date
+          example: 2026-09-28
+        endDate:
+          type: string
+          format: date
+          example: 2026-09-30
+        location:
+          type: string
+          example: Basecamp Renon
+    Booking:
+      type: object
+      properties:
+        _id:
+          type: string
+        code:
+          type: string
+          example: BK-0128
+        user_id:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking_items"
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        location:
+          type: string
+        totalPrice:
+          type: number
+          example: 225000
+        paymentStatus:
+          type: string
+          enum:
+          - Belum bayar
+          - Lunas
+        status:
+          $ref: "#/components/schemas/BookingStatus"
+        timeline:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking_timeline"
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ReturnRequest:
+      required:
+      - condition
+      type: object
+      properties:
+        condition:
+          type: string
+          enum:
+          - Baik
+          - Rusak Ringan
+          - Rusak Berat
+          - Hilang
+        lateHours:
+          minimum: 0
+          type: number
+          example: 1
+        fine:
+          type: number
+          description: Opsional
+        notes:
+          type: string
+    Inspection:
+      type: object
+      properties:
+        _id:
+          type: string
+        booking_id:
+          type: string
+        inspected_by:
+          type: string
+        condition:
+          type: string
+          enum:
+          - Baik
+          - Rusak Ringan
+          - Rusak Berat
+          - Hilang
+        lateHours:
+          type: number
+        fine:
+          type: number
+        notes:
+          type: string
+        inspectedAt:
+          type: string
+          format: date-time
+    DashboardSummary:
+      type: object
+      properties:
+        totalBookings:
+          type: integer
+        totalStock:
+          type: integer
+        totalRevenue:
+          type: number
+        revenueLast7Days:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardSummary_revenueLast7Days"
+        pendingBookings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+    inline_response_200:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Equipment"
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+    inline_response_200_1:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+    inline_response_201:
+      type: object
+      properties:
+        code:
+          type: string
+          example: BK-0128
+        status:
+          type: string
+          example: Pending
+        paymentStatus:
+          type: string
+          example: Belum bayar
+        totalPrice:
+          type: number
+          example: 225000
+    users_id_body:
+      type: object
+      properties:
+        role:
+          $ref: "#/components/schemas/Role"
+        status:
+          type: string
+          enum:
+          - Aktif
+          - Nonaktif
+    LoginResponse_user:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 6500a1b2c3d4e5f678901234
+        name:
+          type: string
+          example: Customer
+        role:
+          $ref: "#/components/schemas/Role"
+    EquipmentInput_specs:
+      type: object
+      properties:
+        label:
+          type: string
+          example: Kapasitas
+        value:
+          type: string
+          example: 4 orang
+    BookingCreateRequest_items:
+      required:
+      - equipment_id
+      - qty
+      type: object
+      properties:
+        equipment_id:
+          type: string
+          example: 6500a1b2c3d4e5f678905678
+        qty:
+          minimum: 1
+          type: integer
+          example: 1
+    Booking_items:
+      type: object
+      properties:
+        equipment_id:
+          type: string
+        name:
+          type: string
+        qty:
+          type: integer
+        pricePerDay:
+          type: number
+    Booking_timeline:
+      type: object
+      properties:
+        title:
+          type: string
+        detail:
+          type: string
+        done:
+          type: boolean
+        at:
+          type: string
+          format: date-time
+    DashboardSummary_revenueLast7Days:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        revenue:
+          type: number
+  responses:
+    BadRequest:
+      description: Input tidak valid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: "Token tidak ada, tidak valid, atau kedaluwarsa"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Forbidden:
+      description: Role tidak sesuai
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Data tidak ditemukan
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Conflict:
+      description: Status booking tidak mengizinkan aksi ini
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    BookingUpdated:
+      description: Booking diperbarui
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Booking"
+  parameters:
+    IdPath:
+      name: id
+      in: path
+      description: ObjectId MongoDB
+      required: true
+      schema:
+        type: string
+        example: 6500a1b2c3d4e5f678909999
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
