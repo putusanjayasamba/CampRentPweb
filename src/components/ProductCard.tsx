@@ -77,13 +77,33 @@ export function ProductIllustration({ type }: { type: Product["type"] }) {
 interface ProductCardProps {
   product: Product;
   onSelect: (product: Product) => void;
+  onRent?: (product: Product) => void;
+  isGuest?: boolean;
 }
 
-export default function ProductCard({ product, onSelect }: ProductCardProps) {
+export default function ProductCard({
+  product,
+  onSelect,
+  onRent,
+  isGuest,
+}: ProductCardProps) {
+  const handleRentClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (onRent) {
+      onRent(product);
+    } else {
+      onSelect(product);
+    }
+  };
+
   return (
     <div className="bg-white rounded-xl sm:rounded-2xl border border-gray-100 shadow-xs hover:shadow-md transition-all overflow-hidden flex flex-col group">
-      {/* Top product image */}
-      <div className="relative h-32 sm:h-44 lg:h-48 w-full bg-gray-100 overflow-hidden flex items-center justify-center">
+      {/* Top product image - clickable for detail */}
+      <div
+        onClick={() => onSelect(product)}
+        className="relative h-32 sm:h-44 lg:h-48 w-full bg-gray-100 overflow-hidden flex items-center justify-center cursor-pointer"
+        title="Klik untuk melihat detail & spesifikasi"
+      >
         {product.image ? (
           <img
             src={product.image}
@@ -97,8 +117,12 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
 
       {/* Card body */}
       <div className="p-3 sm:p-4 lg:p-5 flex-1 flex flex-col justify-between">
-        <div>
-          <h4 className="font-bold text-gray-900 text-xs sm:text-sm leading-snug line-clamp-2">
+        <div
+          onClick={() => onSelect(product)}
+          className="cursor-pointer"
+          title="Klik untuk melihat detail & spesifikasi"
+        >
+          <h4 className="font-bold text-gray-900 text-xs sm:text-sm leading-snug line-clamp-2 hover:text-[#1b4332] transition-colors">
             {product.name}
           </h4>
           <p className="text-[10px] sm:text-xs text-gray-400 mt-0.5">
@@ -127,11 +151,13 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
           {product.available ? (
             <button
               type="button"
-              onClick={() => onSelect(product)}
-              className="w-full py-1.5 sm:py-2 bg-[#e07a2c] hover:bg-[#c8651e] text-white text-[11px] sm:text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
+              onClick={handleRentClick}
+              className="w-full py-1.5 sm:py-2 bg-[#e07a2c] hover:bg-[#c8651e] text-white text-[11px] sm:text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs active:scale-[0.99] flex items-center justify-center gap-1.5"
             >
               <span className="sm:hidden">Sewa</span>
-              <span className="hidden sm:inline">Sewa Sekarang</span>
+              <span className="hidden sm:inline">
+                {isGuest ? "Sewa Sekarang" : "Sewa Sekarang"}
+              </span>
             </button>
           ) : (
             <button

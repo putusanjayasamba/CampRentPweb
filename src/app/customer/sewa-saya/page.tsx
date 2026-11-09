@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import React, { Suspense } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Package, Calendar, Wallet } from "lucide-react";
+import { ChevronRight, Package, Calendar, Wallet, Eye } from "lucide-react";
+import { useCurrentUser } from "@/data/auth";
 import {
-  INITIAL_BOOKINGS,
   BookingRecord,
-  getStoredBookings,
+  useStoredBookings,
 } from "@/data/customerData";
 
 function getStatusBadge(status: BookingRecord["status"]) {
@@ -45,11 +45,9 @@ function getStatusDot(status: BookingRecord["status"]) {
 
 function SewaSayaContent() {
   const router = useRouter();
-  const [bookingList, setBookingList] = useState<BookingRecord[]>(INITIAL_BOOKINGS);
-
-  useEffect(() => {
-    setBookingList(getStoredBookings());
-  }, []);
+  const bookingList = useStoredBookings();
+  const currentUser = useCurrentUser();
+  const isGuest = currentUser?.role === "guest" || !!currentUser?.isGuest;
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#fbfbfa] py-6 sm:py-10">
@@ -65,7 +63,37 @@ function SewaSayaContent() {
           </p>
         </div>
 
-        {/* ── MOBILE: Card List (hidden on md+) ── */}
+        {isGuest ? (
+          <div className="bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 text-center max-w-lg mx-auto shadow-xs">
+            <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
+              <Eye className="w-7 h-7" />
+            </div>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">
+              Mode Tamu (Hanya Lihat)
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-500 leading-relaxed mb-6">
+              Akun Tamu tidak memiliki riwayat sewa karena hanya dapat melihat-lihat katalog. Silakan login atau buat akun untuk mulai menyewa alat camping.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                type="button"
+                onClick={() => router.push("/login?reason=guest_auth")}
+                className="px-5 py-2.5 bg-[#1b4332] hover:bg-[#143326] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              >
+                Login Akun Sekarang
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push("/customer/katalog")}
+                className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+              >
+                Lihat Katalog
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* ── MOBILE: Card List (hidden on md+) ── */}
         <div className="md:hidden space-y-3">
           {bookingList.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-10 text-center">
@@ -187,6 +215,8 @@ function SewaSayaContent() {
             </table>
           </div>
         </div>
+        </>
+        )}
 
       </div>
     </div>

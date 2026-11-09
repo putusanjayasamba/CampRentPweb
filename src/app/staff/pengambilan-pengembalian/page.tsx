@@ -32,10 +32,12 @@ function ConditionPanel({ booking, onSave, onClose }: ConditionPanelProps) {
   const dendaKeterlambatan = jamTerlambat > 0 ? Math.round(totalSewa * 0.1 * jamTerlambat) : 0;
   const totalDendaOtomatis = dendaKerusakan + dendaKeterlambatan;
   const [dendaFinal, setDendaFinal] = useState<number>(totalDendaOtomatis);
+  const [prevDendaOtomatis, setPrevDendaOtomatis] = useState<number>(totalDendaOtomatis);
 
-  React.useEffect(() => {
+  if (totalDendaOtomatis !== prevDendaOtomatis) {
+    setPrevDendaOtomatis(totalDendaOtomatis);
     setDendaFinal(totalDendaOtomatis);
-  }, [totalDendaOtomatis]);
+  }
 
   const kondisiOptions: Array<"Baik" | "Rusak Ringan" | "Rusak Berat" | "Hilang"> = [
     "Baik", "Rusak Ringan", "Rusak Berat", "Hilang",
@@ -283,7 +285,7 @@ export default function PengambilanPengembalianPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingOps | null>(null);
   const [mobileSheetOpen, setMobileSheetOpen] = useState(false);
 
-  const handleSaveCondition = (data: { kondisi: string; denda: number; catatan: string }) => {
+  const handleSaveCondition = () => {
     if (!selectedBooking) return;
     setBookings((prev) =>
       prev.map((b) => (b.kode === selectedBooking.kode ? { ...b, status: "Completed" } : b))

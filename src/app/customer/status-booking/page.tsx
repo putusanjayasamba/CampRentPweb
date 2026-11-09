@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useMemo, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Eye } from "lucide-react";
+import { useCurrentUser } from "@/data/auth";
 import {
-  INITIAL_BOOKINGS,
   BookingRecord,
-  getStoredBookings,
+  useStoredBookings,
   saveStoredBookings,
 } from "@/data/customerData";
 
@@ -58,88 +58,21 @@ function getStepTimestamp(booking: BookingRecord, stepIndex: number) {
   return "Menunggu";
 }
 
-function StatusBookingContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const initialKode = searchParams.get("kode") || INITIAL_BOOKINGS[0].code;
+// ── DETAIL PANEL COMPONENT ──
+interface DetailPanelProps {
+  activeBooking: BookingRecord;
+  currentStepIdx: number;
+  onContactAdmin: () => void;
+  onCancelBooking: (code: string) => void;
+}
 
-  const [bookingList, setBookingList] = useState<BookingRecord[]>(INITIAL_BOOKINGS);
-  const [selectedCode, setSelectedCode] = useState<string>(initialKode);
-  // Mobile: show list or detail
-  const [mobileView, setMobileView] = useState<"list" | "detail">("list");
-
-  useEffect(() => {
-    setBookingList(getStoredBookings());
-  }, []);
-
-  // If there's a kode in URL, go straight to detail on mobile
-  useEffect(() => {
-    const kode = searchParams.get("kode");
-    if (kode) {
-      setSelectedCode(kode);
-      setMobileView("detail");
-    }
-  }, [searchParams]);
-
-  const activeBooking = useMemo(
-    () => bookingList.find((b) => b.code === selectedCode) || bookingList[0],
-    [bookingList, selectedCode]
-  );
-
-  const handleSelectBooking = (code: string) => {
-    setSelectedCode(code);
-    setMobileView("detail");
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("kode", code);
-    router.replace(`/customer/status-booking?${params.toString()}`, { scroll: false });
-  };
-
-  const handleContactAdmin = () => {
-    const text = encodeURIComponent(
-      `Halo Admin CampRent, saya ingin bertanya terkait pesanan booking saya (${activeBooking.code} - ${activeBooking.items}).`
-    );
-    window.open(`https://wa.me/6281234567890?text=${text}`, "_blank");
-  };
-
-  const handleCancelBooking = (code: string) => {
-    if (activeBooking.status === "Cancelled") {
-      alert(`Booking ${code} sudah dibatalkan sebelumnya.`);
-      return;
-    }
-    if (activeBooking.status !== "Pending") {
-      alert(
-        `Booking ${code} berstatus "${activeBooking.status}" dan tidak dapat dibatalkan secara langsung melalui web. Silakan hubungi admin CampRent untuk bantuan pembatalan.`
-      );
-      return;
-    }
-
-    if (confirm(`Apakah Anda yakin ingin membatalkan booking ${code}?`)) {
-      const updated = bookingList.map((b) =>
-        b.code === code
-          ? {
-              ...b,
-              status: "Cancelled" as const,
-              timeline: [
-                ...b.timeline,
-                {
-                  title: "Booking dibatalkan",
-                  detail: "Dibatalkan oleh customer",
-                  done: true,
-                },
-              ],
-            }
-          : b
-      );
-      setBookingList(updated);
-      saveStoredBookings(updated);
-      alert(`Booking ${code} telah berhasil dibatalkan.`);
-    }
-  };
-
-  const currentStepIdx = getStatusIndex(activeBooking.status);
-
-  // ── DETAIL PANEL (shared between mobile and desktop) ──
-  const DetailPanel = () => (
+function DetailPanel({
+  activeBooking,
+  currentStepIdx,
+  onContactAdmin,
+  onCancelBooking,
+}: DetailPanelProps) {
+  return (
     <div className="flex-1 w-full bg-white border border-gray-200/80 rounded-2xl p-5 sm:p-8 md:p-10 shadow-xs">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
@@ -179,63 +112,52 @@ function StatusBookingContent() {
                     {step.number}
                   </div>
                 </div>
-                <span
-                  className={`mt-2 text-[10px] sm:text-xs ${
-                    isCurrent || isCompleted
-                      ? "font-bold text-gray-900"
-                      : "font-semibold text-gray-500"
-                  }`}
-                >
+                <div className="mt-2 text-xs font-semibold text-gray-800">
                   {step.label}
-                </span>
-                <span className="mt-0.5 text-[10px] sm:text-xs text-gray-400">
+                </div>
+                <div className="text-[11px] text-gray-400 mt-0.5">
                   {timestamp}
-                </span>
+                </div>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* Info Grid */}
-      <div className="grid grid-cols-2 gap-y-5 gap-x-6 my-6 pt-2 border-t border-gray-100">
+      {/* Meta Grid */}
+      <div className="bg-[#fcfbf9] rounded-xl p-5 border border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
         <div>
-          <p className="text-[10px] sm:text-xs text-gray-400 font-medium mb-1">Ambil</p>
-          <p className="text-sm sm:text-base font-bold text-gray-900">{activeBooking.startDate}</p>
+          <span className="text-gray-400 block text-[11px] font-normal">Periode Sewa</span>
+          <span className="font-semibold text-gray-800 mt-0.5 block">{activeBooking.period}</span>
         </div>
         <div>
-          <p className="text-[10px] sm:text-xs text-gray-400 font-medium mb-1">Kembali</p>
-          <p className="text-sm sm:text-base font-bold text-gray-900">{activeBooking.endDate}</p>
-        </div>
-        <div>
-          <p className="text-[10px] sm:text-xs text-gray-400 font-medium mb-1">Lokasi</p>
-          <p className="text-xs sm:text-sm font-bold text-gray-900">{activeBooking.location}</p>
-        </div>
-        <div>
-          <p className="text-[10px] sm:text-xs text-gray-400 font-medium mb-1">Total bayar</p>
-          <p className="text-sm sm:text-base font-bold text-[#1b4332]">
+          <span className="text-gray-400 block text-[11px] font-normal">Total Biaya</span>
+          <span className="font-bold text-gray-900 mt-0.5 block text-sm">
             Rp {activeBooking.total.toLocaleString("id-ID")}
-          </p>
+          </span>
+        </div>
+        <div className="sm:col-span-2">
+          <span className="text-gray-400 block text-[11px] font-normal">Lokasi Pengambilan &amp; Pengembalian</span>
+          <span className="font-medium text-gray-800 mt-0.5 block">{activeBooking.location}</span>
         </div>
       </div>
 
-      {/* Riwayat Status */}
-      <div className="mt-6 border-t border-gray-100 pt-5">
-        <h3 className="text-xs sm:text-sm font-bold text-gray-900 mb-4">Riwayat status</h3>
-        <div className="relative pl-6 space-y-5">
-          <div className="absolute left-[3.5px] top-2 bottom-2 w-[1.5px] bg-gray-200" />
+      {/* Timeline List */}
+      <div className="mt-8">
+        <h3 className="font-bold text-sm text-gray-900 mb-4">Aktivitas Booking</h3>
+        <div className="space-y-4">
           {activeBooking.timeline.map((item, idx) => (
-            <div key={idx} className="relative flex items-start gap-3">
-              <span
-                className={`absolute -left-6 top-1.5 w-2.5 h-2.5 rounded-full ring-2 ring-white ${
-                  item.done ? "bg-[#1b4332]" : "bg-gray-300"
+            <div key={idx} className="flex items-start gap-3 text-xs">
+              <div
+                className={`w-2.5 h-2.5 rounded-full mt-1 shrink-0 ${
+                  item.done ? "bg-[#2d6a4f]" : "bg-gray-300"
                 }`}
               />
               <div>
-                <p className={`text-xs sm:text-sm ${item.done ? "font-bold text-gray-900" : "font-semibold text-gray-500"}`}>
+                <p className={`font-semibold ${item.done ? "text-gray-900" : "text-gray-400"}`}>
                   {item.title}
                 </p>
-                <p className="text-[11px] sm:text-xs text-gray-400 mt-0.5">{item.detail}</p>
+                <p className="text-gray-400 text-[11px] mt-0.5">{item.detail}</p>
               </div>
             </div>
           ))}
@@ -246,14 +168,14 @@ function StatusBookingContent() {
       <div className="flex flex-col sm:flex-row items-center gap-3 mt-8 pt-4 border-t border-gray-100">
         <button
           type="button"
-          onClick={handleContactAdmin}
+          onClick={onContactAdmin}
           className="w-full sm:flex-1 py-3 px-6 rounded-xl border border-[#1b4332] text-[#1b4332] hover:bg-emerald-50/50 font-semibold text-xs sm:text-sm transition-colors cursor-pointer text-center"
         >
           Hubungi Admin
         </button>
         <button
           type="button"
-          onClick={() => handleCancelBooking(activeBooking.code)}
+          onClick={() => onCancelBooking(activeBooking.code)}
           className="w-full sm:flex-1 py-3 px-6 rounded-xl bg-[#b83828] hover:bg-[#a53022] text-white font-semibold text-xs sm:text-sm transition-colors cursor-pointer text-center shadow-xs"
         >
           Batalkan
@@ -261,17 +183,25 @@ function StatusBookingContent() {
       </div>
     </div>
   );
+}
 
-  // ── BOOKING LIST CARDS (shared) ──
-  const BookingListCards = ({ onSelect }: { onSelect?: (code: string) => void }) => (
+// ── BOOKING LIST CARDS COMPONENT ──
+interface BookingListCardsProps {
+  bookingList: BookingRecord[];
+  activeCode: string;
+  onSelect: (code: string) => void;
+}
+
+function BookingListCards({ bookingList, activeCode, onSelect }: BookingListCardsProps) {
+  return (
     <div className="space-y-3">
       {bookingList.map((b) => {
-        const isSelected = b.code === activeBooking.code;
+        const isSelected = b.code === activeCode;
         return (
           <button
             key={b.code}
             type="button"
-            onClick={() => onSelect ? onSelect(b.code) : handleSelectBooking(b.code)}
+            onClick={() => onSelect(b.code)}
             className={`w-full text-left p-4 rounded-xl transition-all cursor-pointer ${
               isSelected
                 ? "border-2 border-[#2d6a4f] bg-white shadow-xs"
@@ -284,7 +214,6 @@ function StatusBookingContent() {
                 <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${getStatusBadge(b.status)}`}>
                   {b.status}
                 </span>
-                {/* Show chevron only on mobile */}
                 <ChevronRight className="w-3.5 h-3.5 text-gray-400 lg:hidden" />
               </div>
             </div>
@@ -294,10 +223,122 @@ function StatusBookingContent() {
       })}
     </div>
   );
+}
+
+function StatusBookingContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const bookingList = useStoredBookings();
+  const currentUser = useCurrentUser();
+  const isGuest = currentUser?.role === "guest" || !!currentUser?.isGuest;
+
+  const urlKode = searchParams.get("kode");
+  const [userSelectedCode, setUserSelectedCode] = useState<string | null>(null);
+  const [mobileView, setMobileView] = useState<"list" | "detail">(urlKode ? "detail" : "list");
+
+  const selectedCode = userSelectedCode || urlKode || bookingList[0]?.code || "";
+  const activeBooking = useMemo(
+    () => bookingList.find((b) => b.code === selectedCode) || bookingList[0],
+    [bookingList, selectedCode]
+  );
+
+  const handleSelectBooking = (code: string) => {
+    setUserSelectedCode(code);
+    setMobileView("detail");
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("kode", code);
+    router.replace(`/customer/status-booking?${params.toString()}`, { scroll: false });
+  };
+
+  const handleContactAdmin = () => {
+    if (!activeBooking) return;
+    const text = encodeURIComponent(
+      `Halo Admin CampRent, saya ingin bertanya terkait pesanan booking saya (${activeBooking.code} - ${activeBooking.items}).`
+    );
+    window.open(`https://wa.me/6281234567890?text=${text}`, "_blank");
+  };
+
+  const handleCancelBooking = (code: string) => {
+    if (!activeBooking) return;
+    if (activeBooking.status === "Cancelled") {
+      alert(`Booking ${code} sudah dibatalkan sebelumnya.`);
+      return;
+    }
+    if (activeBooking.status !== "Pending") {
+      alert(
+        `Booking ${code} berstatus "${activeBooking.status}" dan tidak dapat dibatalkan secara langsung melalui web. Silakan hubungi admin CampRent untuk bantuan pembatalan.`
+      );
+      return;
+    }
+
+    if (confirm(`Apakah Anda yakin ingin membatalkan booking ${code}?`)) {
+      const updated = bookingList.map((b) =>
+        b.code === code
+          ? {
+              ...b,
+              status: "Cancelled" as const,
+              timeline: [
+                ...b.timeline,
+                {
+                  title: "Booking dibatalkan",
+                  detail: "Dibatalkan oleh customer",
+                  done: true,
+                },
+              ],
+            }
+          : b
+      );
+      saveStoredBookings(updated);
+      alert(`Booking ${code} telah berhasil dibatalkan.`);
+    }
+  };
+
+  const currentStepIdx = activeBooking ? getStatusIndex(activeBooking.status) : 0;
+
+  if (isGuest) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-[#fbfbfa] py-8 sm:py-16 px-4">
+        <div className="bg-white rounded-2xl border border-gray-200 p-8 sm:p-12 text-center max-w-lg mx-auto shadow-xs">
+          <div className="w-14 h-14 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
+            <Eye className="w-7 h-7" />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-2">
+            Mode Tamu (Hanya Lihat)
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-500 leading-relaxed mb-6">
+            Status booking real-time hanya dapat dipantau oleh akun yang melakukan pemesanan. Silakan masuk atau daftar akun Anda untuk menyewa alat camping.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              type="button"
+              onClick={() => router.push("/login?reason=guest_auth")}
+              className="px-5 py-2.5 bg-[#1b4332] hover:bg-[#143326] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            >
+              Login Akun Sekarang
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/customer/katalog")}
+              className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+            >
+              Lihat Katalog
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeBooking) {
+    return (
+      <div className="min-h-[calc(100vh-64px)] bg-[#fbfbfa] p-10 text-center text-gray-500">
+        Belum ada data booking.
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-[calc(100vh-64px)] bg-[#fbfbfa]">
-
       {/* ── MOBILE LAYOUT (hidden on lg+) ── */}
       <div className="lg:hidden">
         {mobileView === "list" ? (
@@ -307,7 +348,11 @@ function StatusBookingContent() {
               <h1 className="text-xl font-bold text-gray-900 tracking-tight">Status Booking</h1>
               <p className="text-xs text-gray-500 mt-0.5">Pilih booking untuk melihat detail</p>
             </div>
-            <BookingListCards onSelect={(code) => handleSelectBooking(code)} />
+            <BookingListCards
+              bookingList={bookingList}
+              activeCode={activeBooking.code}
+              onSelect={handleSelectBooking}
+            />
           </div>
         ) : (
           /* Mobile: Booking Detail */
@@ -325,7 +370,12 @@ function StatusBookingContent() {
             </div>
 
             <div className="px-4 pb-6">
-              <DetailPanel />
+              <DetailPanel
+                activeBooking={activeBooking}
+                currentStepIdx={currentStepIdx}
+                onContactAdmin={handleContactAdmin}
+                onCancelBooking={handleCancelBooking}
+              />
             </div>
           </div>
         )}
@@ -340,14 +390,22 @@ function StatusBookingContent() {
           <div className="flex flex-row items-start gap-6">
             {/* Left Sidebar */}
             <div className="w-72 xl:w-80 shrink-0">
-              <BookingListCards />
+              <BookingListCards
+                bookingList={bookingList}
+                activeCode={activeBooking.code}
+                onSelect={handleSelectBooking}
+              />
             </div>
             {/* Right Detail */}
-            <DetailPanel />
+            <DetailPanel
+              activeBooking={activeBooking}
+              currentStepIdx={currentStepIdx}
+              onContactAdmin={handleContactAdmin}
+              onCancelBooking={handleCancelBooking}
+            />
           </div>
         </div>
       </div>
-
     </div>
   );
 }

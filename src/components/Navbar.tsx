@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search, LogOut, Menu, X, LayoutGrid, BookOpen, ClipboardList } from "lucide-react";
+import { Search, LogOut, Menu, X, LayoutGrid, BookOpen, ClipboardList, LogIn } from "lucide-react";
+import { useCurrentUser } from "@/data/auth";
 
 interface NavbarProps {
   searchQuery?: string;
@@ -11,27 +12,41 @@ interface NavbarProps {
   activePage?: string;
 }
 
-export default function Navbar({ searchQuery, onSearchChange, activePage }: NavbarProps = {}) {
+export default function Navbar({ searchQuery, onSearchChange }: NavbarProps = {}) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const user = useCurrentUser();
 
-  useEffect(() => {
-    if (searchQuery !== undefined) {
-      setSearchValue(searchQuery);
-    } else {
-      const q = searchParams.get("q") || "";
-      setSearchValue(q);
-    }
-  }, [searchParams, searchQuery]);
+  const isGuest = user?.role === "guest" || !!user?.isGuest;
+  const displayName = isGuest ? "Tamu (Guest)" : user?.name || "Customer CampRent";
+  const displayEmail = isGuest ? "Mode Hanya Lihat" : user?.email || "an.customer@camprent.id";
+  const userInitials = isGuest
+    ? "TM"
+    : displayName
+        .split(" ")
+        .slice(0, 2)
+        .map((w) => w[0]?.toUpperCase() || "")
+        .join("") || "AN";
 
-  // Close mobile menu on route change
-  useEffect(() => {
+  // Derive and adjust search value during render (avoids cascading render effect)
+  const currentQuery = searchQuery !== undefined ? searchQuery : (searchParams.get("q") || "");
+  const [searchValue, setSearchValue] = useState(currentQuery);
+  const [prevQuery, setPrevQuery] = useState(currentQuery);
+
+  if (currentQuery !== prevQuery) {
+    setPrevQuery(currentQuery);
+    setSearchValue(currentQuery);
+  }
+
+  // Adjust mobile menu state during render on route change
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setMobileMenuOpen(false);
-  }, [pathname]);
+  }
 
   // Prevent body scroll when menu open
   useEffect(() => {
@@ -141,19 +156,47 @@ export default function Navbar({ searchQuery, onSearchChange, activePage }: Navb
               <button
                 type="button"
                 onClick={() => setShowProfileMenu(!showProfileMenu)}
-                className="w-8 h-8 rounded-full bg-[#e07a2c] text-white text-xs font-bold flex items-center justify-center hover:opacity-90 transition-opacity cursor-pointer shadow-xs"
+                className={`h-8 px-2.5 rounded-full text-white text-xs font-bold flex items-center gap-1.5 hover:opacity-90 transition-opacity cursor-pointer shadow-xs ${
+                  isGuest ? "bg-[#ea580c]" : "bg-[#e07a2c]"
+                }`}
+                title={isGuest ? "Mode Tamu" : displayName}
               >
-                AN
+                <span>{userInitials}</span>
+                {isGuest && (
+                  <span className="text-[10px] font-medium bg-black/20 px-1.5 py-0.2 rounded-full">
+                    Tamu
+                  </span>
+                )}
               </button>
 
               {showProfileMenu && (
-                <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-50 text-xs text-gray-700 animate-in fade-in">
-                  <div className="px-4 py-2 border-b border-gray-100 font-semibold text-gray-900">
-                    Customer CampRent
-                    <div className="text-[10px] text-gray-400 font-normal">
-                      an.customer@camprent.id
+                <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1.5 z-50 text-xs text-gray-700 animate-in fade-in">
+                  <div className="px-4 py-2.5 border-b border-gray-100 font-semibold text-gray-900">
+                    <div className="flex items-center justify-between">
+                      <span className="truncate">{displayName}</span>
+                      {isGuest && (
+                        <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded-full shrink-0">
+                          Tamu
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[10px] text-gray-400 font-normal mt-0.5 truncate">
+                      {displayEmail}
                     </div>
                   </div>
+
+                  {isGuest && (
+                    <div className="p-2 border-b border-gray-100 bg-amber-50/50">
+                      <Link
+                        href="/login?reason=guest_sewa"
+                        onClick={() => setShowProfileMenu(false)}
+                        className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 bg-[#26533c] hover:bg-[#1b4332] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        <span>Login Akun untuk Sewa</span>
+                      </Link>
+                    </div>
+                  )}
 
                   <div className="py-1">
                     {navLinks.map((link) => (
@@ -176,7 +219,7 @@ export default function Navbar({ searchQuery, onSearchChange, activePage }: Navb
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 flex items-center gap-2 cursor-pointer"
                     >
-                      <LogOut className="w-3.5 h-3.5" /> Keluar
+                      <LogOut className="w-3.5 h-3.5" /> {isGuest ? "Keluar Mode Tamu" : "Keluar"}
                     </button>
                   </div>
                 </div>
@@ -186,8 +229,12 @@ export default function Navbar({ searchQuery, onSearchChange, activePage }: Navb
             {/* Mobile: Avatar initial + Hamburger button */}
             <div className="flex items-center gap-2 sm:hidden">
               {/* Small avatar badge */}
-              <div className="w-7 h-7 rounded-full bg-[#e07a2c] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
-                AN
+              <div
+                className={`w-7 h-7 rounded-full text-white text-[10px] font-bold flex items-center justify-center shadow-xs ${
+                  isGuest ? "bg-[#ea580c]" : "bg-[#e07a2c]"
+                }`}
+              >
+                {userInitials}
               </div>
 
               {/* Hamburger button */}
@@ -235,14 +282,38 @@ export default function Navbar({ searchQuery, onSearchChange, activePage }: Navb
             {/* User Info */}
             <div className="px-5 py-4 border-b border-white/10">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#e07a2c] text-white text-sm font-bold flex items-center justify-center shadow-sm shrink-0">
-                  AN
+                <div
+                  className={`w-10 h-10 rounded-full text-white text-sm font-bold flex items-center justify-center shadow-sm shrink-0 ${
+                    isGuest ? "bg-[#ea580c]" : "bg-[#e07a2c]"
+                  }`}
+                >
+                  {userInitials}
                 </div>
                 <div>
-                  <p className="text-white text-sm font-semibold">Customer CampRent</p>
-                  <p className="text-white/50 text-[11px]">an.customer@camprent.id</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-white text-sm font-semibold">{displayName}</p>
+                    {isGuest && (
+                      <span className="text-[9px] bg-amber-400 text-amber-950 font-bold px-1.5 py-0.2 rounded-full">
+                        Tamu
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-white/60 text-[11px]">{displayEmail}</p>
                 </div>
               </div>
+
+              {isGuest && (
+                <div className="mt-3">
+                  <Link
+                    href="/login?reason=guest_sewa"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 bg-[#e07a2c] hover:bg-[#c8651e] text-white text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Login Akun untuk Sewa</span>
+                  </Link>
+                </div>
+              )}
             </div>
 
             {/* Search Bar */}

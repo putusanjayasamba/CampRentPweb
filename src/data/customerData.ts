@@ -1,3 +1,5 @@
+import { useSyncExternalStore } from "react";
+
 export interface ProductSpec {
   label: string;
   value: string;
@@ -289,6 +291,41 @@ export const INITIAL_BOOKINGS: BookingRecord[] = [
   },
 ];
 
+let cachedBookingsRaw: string | null = null;
+let cachedBookings: BookingRecord[] = INITIAL_BOOKINGS;
+
+function bookingsSubscribe(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", callback);
+  window.addEventListener("camprent_bookings_change", callback);
+  return () => {
+    window.removeEventListener("storage", callback);
+    window.removeEventListener("camprent_bookings_change", callback);
+  };
+}
+
+function getBookingsSnapshot(): BookingRecord[] {
+  if (typeof window === "undefined") return INITIAL_BOOKINGS;
+  const raw = localStorage.getItem("camprent_bookings");
+  if (raw !== cachedBookingsRaw) {
+    cachedBookingsRaw = raw;
+    try {
+      cachedBookings = raw ? JSON.parse(raw) : INITIAL_BOOKINGS;
+    } catch {
+      cachedBookings = INITIAL_BOOKINGS;
+    }
+  }
+  return cachedBookings;
+}
+
+function getBookingsServerSnapshot(): BookingRecord[] {
+  return INITIAL_BOOKINGS;
+}
+
+export function useStoredBookings(): BookingRecord[] {
+  return useSyncExternalStore(bookingsSubscribe, getBookingsSnapshot, getBookingsServerSnapshot);
+}
+
 export function getStoredBookings(): BookingRecord[] {
   if (typeof window !== "undefined") {
     try {
@@ -307,6 +344,7 @@ export function saveStoredBookings(bookings: BookingRecord[]) {
   if (typeof window !== "undefined") {
     try {
       localStorage.setItem("camprent_bookings", JSON.stringify(bookings));
+      window.dispatchEvent(new Event("camprent_bookings_change"));
     } catch (e) {
       console.error(e);
     }

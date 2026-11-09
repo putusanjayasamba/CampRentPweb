@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useMemo, Suspense } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { X, CheckCircle2, SlidersHorizontal } from "lucide-react";
+import { X, CheckCircle2, SlidersHorizontal, LogIn } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
+import { useCurrentUser } from "@/data/auth";
 import {
   INITIAL_PRODUCTS,
-  INITIAL_BOOKINGS,
   Product,
   BookingRecord,
   getStoredBookings,
@@ -18,6 +17,10 @@ function KatalogContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const querySearch = searchParams.get("q") || "";
+
+  // Guest state via reactive external store
+  const currentUser = useCurrentUser();
+  const isGuest = currentUser?.role === "guest" || !!currentUser?.isGuest;
 
   // Date states for hero availability check
   const [pickupDate, setPickupDate] = useState("28 Sep 2026");
@@ -42,9 +45,8 @@ function KatalogContent() {
     availability: "all" as "available" | "all",
   });
 
-  // Products and bookings data
+  // Products data
   const [products] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [bookings, setBookings] = useState<BookingRecord[]>(INITIAL_BOOKINGS);
 
   // Selected product for modal
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -207,7 +209,6 @@ function KatalogContent() {
 
     const updated = [newBooking, ...getStoredBookings()];
     saveStoredBookings(updated);
-    setBookings(updated);
     setBookingSuccess(true);
   };
 
@@ -221,6 +222,29 @@ function KatalogContent() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* GUEST BANNER */}
+      {isGuest && (
+        <div className="bg-[#fff8ee] border-b border-[#fed7aa] px-4 py-2.5 text-xs text-[#9a3412]">
+          <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#ea580c] text-white">
+                Mode Tamu
+              </span>
+              <span>
+                Anda masuk sebagai <strong>Tamu (Guest)</strong> — hanya dapat melihat-lihat katalog. Ingin menyewa alat? Silakan login akun.
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/login?reason=guest_sewa")}
+              className="shrink-0 px-3 py-1 bg-[#1b4332] hover:bg-[#143326] text-white font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+            >
+              Login Sekarang
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* HERO SECTION */}
       <section className="bg-[#1b4332] text-white pt-6 pb-6 px-4 sm:px-6 lg:px-12">
         <div className="max-w-7xl mx-auto">
@@ -616,7 +640,18 @@ function KatalogContent() {
                   <ProductCard
                     key={p.id}
                     product={p}
+                    isGuest={isGuest}
                     onSelect={(prod) => {
+                      setSelectedProduct(prod);
+                      setModalPickupDate(pickupDate);
+                      setModalReturnDate(returnDate);
+                      setBookingSuccess(false);
+                    }}
+                    onRent={(prod) => {
+                      if (isGuest) {
+                        router.push("/login?reason=guest_sewa");
+                        return;
+                      }
                       setSelectedProduct(prod);
                       setModalPickupDate(pickupDate);
                       setModalReturnDate(returnDate);
@@ -804,15 +839,31 @@ function KatalogContent() {
                     </div>
                   </div>
 
-                  {/* Konfirmasi Booking Button */}
-                  <button
-                    type="button"
-                    onClick={handleBookingSubmit}
-                    disabled={!selectedProduct.available}
-                    className="w-full py-3 bg-[#2d6a4f] hover:bg-[#23583c] disabled:bg-gray-300 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
-                  >
-                    Konfirmasi Booking
-                  </button>
+                  {/* Konfirmasi Booking Button / Guest Login Button */}
+                  {isGuest ? (
+                    <div className="space-y-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => router.push("/login?reason=guest_sewa")}
+                        className="w-full py-3 bg-[#e07a2c] hover:bg-[#c8651e] text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer shadow-xs active:scale-[0.99] flex items-center justify-center gap-2"
+                      >
+                        <LogIn className="w-4 h-4" />
+                        <span>Login Akun untuk Menyewa</span>
+                      </button>
+                      <p className="text-[11px] text-gray-500 text-center">
+                        *Anda sedang masuk sebagai Tamu. Silakan login untuk menyelesaikan transaksi sewa.
+                      </p>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleBookingSubmit}
+                      disabled={!selectedProduct.available}
+                      className="w-full py-3 bg-[#2d6a4f] hover:bg-[#23583c] disabled:bg-gray-300 text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer shadow-xs active:scale-[0.99]"
+                    >
+                      Konfirmasi Booking
+                    </button>
+                  )}
                 </div>
               )}
             </div>

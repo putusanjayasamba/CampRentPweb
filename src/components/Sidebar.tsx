@@ -3,16 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import {
-  LogOut,
-  LucideIcon,
-  Menu,
-  X,
-  LayoutDashboard,
-  Package,
-  ClipboardList,
-  Users,
-} from "lucide-react";
+import { LogOut, LucideIcon, Menu, X } from "lucide-react";
 
 export interface SidebarItem {
   label: string;
@@ -29,6 +20,81 @@ interface SidebarProps {
   pageTitle?: string;
 }
 
+interface SidebarNavContentProps {
+  brandHref: string;
+  items: SidebarItem[];
+  isStaff: boolean;
+  borderClass: string;
+  activeClass: string;
+  hoverClass: string;
+  roleLabel: string;
+  onLogout: () => void;
+  onItemClick?: () => void;
+}
+
+function SidebarNavContent({
+  brandHref,
+  items,
+  isStaff,
+  borderClass,
+  activeClass,
+  hoverClass,
+  roleLabel,
+  onLogout,
+  onItemClick,
+}: SidebarNavContentProps) {
+  return (
+    <>
+      <div>
+        {/* Brand Header */}
+        <div className={`px-6 py-6 ${isStaff ? `border-b ${borderClass}` : ""}`}>
+          <Link href={brandHref} className="text-xl font-bold tracking-tight text-white">
+            Camp<span className="text-[#f97316]">Rent</span>
+          </Link>
+        </div>
+
+        {/* Navigation Items */}
+        <nav className="p-3.5 space-y-1.5">
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onItemClick}
+                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
+                  item.active ? activeClass : hoverClass
+                }`}
+              >
+                {Icon && <Icon className="w-4 h-4 text-emerald-400 shrink-0" />}
+                <span className="truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* Footer: Role + Logout */}
+      <div
+        className={`px-6 py-5 border-t flex items-center justify-between gap-2 ${
+          isStaff ? borderClass : "border-white/10"
+        }`}
+      >
+        <span className="text-xs text-[#a0b8aa]/80 truncate">{roleLabel}</span>
+        <button
+          type="button"
+          onClick={onLogout}
+          title="Keluar / Log Out"
+          aria-label="Keluar / Log Out"
+          className="p-1.5 text-[#a0b8aa] hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer flex items-center justify-center shrink-0"
+        >
+          <LogOut className="w-4 h-4" />
+        </button>
+      </div>
+    </>
+  );
+}
+
 export default function Sidebar({
   brandHref = "/",
   items,
@@ -40,10 +106,12 @@ export default function Sidebar({
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Close drawer on route change
-  useEffect(() => {
+  // Close drawer on route change during render
+  const [prevPathname, setPrevPathname] = useState(pathname);
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
     setMobileOpen(false);
-  }, [pathname]);
+  }
 
   // Lock body scroll when drawer open
   useEffect(() => {
@@ -74,57 +142,6 @@ export default function Sidebar({
     ? "text-[#a0b8aa] hover:bg-[#264335] hover:text-white"
     : "text-gray-300 hover:text-white hover:bg-white/5";
 
-  // Shared sidebar nav content
-  const SidebarNav = () => (
-    <>
-      <div>
-        {/* Brand Header */}
-        <div className={`px-6 py-6 ${isStaff ? `border-b ${borderClass}` : ""}`}>
-          <Link href={brandHref} className="text-xl font-bold tracking-tight text-white">
-            Camp<span className="text-[#f97316]">Rent</span>
-          </Link>
-        </div>
-
-        {/* Navigation Items */}
-        <nav className="p-3.5 space-y-1.5">
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs transition-all cursor-pointer ${
-                  item.active ? activeClass : hoverClass
-                }`}
-              >
-                {Icon && <Icon className="w-4 h-4 text-emerald-400 shrink-0" />}
-                <span className="truncate">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Footer: Role + Logout */}
-      <div
-        className={`px-6 py-5 border-t flex items-center justify-between gap-2 ${
-          isStaff ? borderClass : "border-white/10"
-        }`}
-      >
-        <span className="text-xs text-[#a0b8aa]/80 truncate">{roleLabel}</span>
-        <button
-          type="button"
-          onClick={handleLogout}
-          title="Keluar / Log Out"
-          aria-label="Keluar / Log Out"
-          className="p-1.5 text-[#a0b8aa] hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer flex items-center justify-center shrink-0"
-        >
-          <LogOut className="w-4 h-4" />
-        </button>
-      </div>
-    </>
-  );
-
   return (
     <>
       {/* ── MOBILE TOP HEADER BAR ── */}
@@ -134,23 +151,22 @@ export default function Sidebar({
         {/* Hamburger */}
         <button
           type="button"
-          id="admin-hamburger-btn"
           onClick={() => setMobileOpen(true)}
-          className="w-8 h-8 flex items-center justify-center text-gray-700 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+          className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer transition-colors"
           aria-label="Buka menu"
         >
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Page title centered */}
-        <h1 className="text-sm font-bold text-gray-900 tracking-tight absolute left-1/2 -translate-x-1/2">
-          {pageTitle || "Dashboard Admin"}
-        </h1>
+        {/* Brand */}
+        <Link href={brandHref} className="text-lg font-bold text-[#1b4332]">
+          Camp<span className="text-[#f97316]">Rent</span>
+        </Link>
 
-        {/* Avatar */}
-        <div className="w-8 h-8 rounded-full bg-[#e07a2c] text-white text-xs font-bold flex items-center justify-center shadow-xs">
-          IB
-        </div>
+        {/* Page title or role pill */}
+        <span className="text-[11px] font-semibold bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-100">
+          {pageTitle || roleLabel}
+        </span>
       </div>
 
       {/* ── MOBILE DRAWER ── */}
@@ -158,23 +174,31 @@ export default function Sidebar({
         <div className="fixed inset-0 z-50 lg:hidden">
           {/* Backdrop */}
           <div
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
             onClick={() => setMobileOpen(false)}
           />
-          {/* Drawer from left */}
+
+          {/* Drawer content */}
           <aside
-            className={`absolute top-0 left-0 h-full w-64 ${bgClass} text-white flex flex-col justify-between shadow-2xl animate-in slide-in-from-left duration-200`}
+            className={`absolute top-0 bottom-0 left-0 w-72 ${bgClass} text-white flex flex-col justify-between shadow-2xl animate-in slide-in-from-left duration-200`}
           >
-            {/* Close button */}
             <div>
-              <div className={`flex items-center justify-between px-6 py-5 border-b ${borderClass}`}>
-                <Link href={brandHref} className="text-xl font-bold tracking-tight text-white">
+              {/* Header with Close button */}
+              <div
+                className={`px-6 py-5 border-b ${borderClass} flex items-center justify-between`}
+              >
+                <Link
+                  href={brandHref}
+                  onClick={() => setMobileOpen(false)}
+                  className="text-xl font-bold tracking-tight text-white"
+                >
                   Camp<span className="text-[#f97316]">Rent</span>
                 </Link>
                 <button
                   type="button"
                   onClick={() => setMobileOpen(false)}
-                  className="w-8 h-8 flex items-center justify-center text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                  className="p-1.5 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors cursor-pointer"
+                  aria-label="Tutup menu"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -188,6 +212,7 @@ export default function Sidebar({
                     <Link
                       key={item.href}
                       href={item.href}
+                      onClick={() => setMobileOpen(false)}
                       className={`w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-sm transition-all cursor-pointer ${
                         item.active ? activeClass : hoverClass
                       }`}
@@ -219,7 +244,16 @@ export default function Sidebar({
       <aside
         className={`hidden lg:flex w-60 ${bgClass} text-white flex-col justify-between shrink-0 min-h-screen sticky top-0`}
       >
-        <SidebarNav />
+        <SidebarNavContent
+          brandHref={brandHref}
+          items={items}
+          isStaff={isStaff}
+          borderClass={borderClass}
+          activeClass={activeClass}
+          hoverClass={hoverClass}
+          roleLabel={roleLabel}
+          onLogout={handleLogout}
+        />
       </aside>
     </>
   );

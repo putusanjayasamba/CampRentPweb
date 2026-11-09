@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,22 +20,50 @@ const EXTRA_BOOKINGS: BookingItem[] = [
   { kode: "BK-0082", customer: "Nyoman Yoga", alat: "Lampu LED, Tenda Dome 4P", periode: "10-12 Agu", total: 170000, pembayaran: "Lunas", status: "Completed" },
 ];
 
+interface PaginationBarProps {
+  currentPage: number;
+  onPageChange: (p: number) => void;
+  compact?: boolean;
+}
+
+function PaginationBar({ currentPage, onPageChange, compact = false }: PaginationBarProps) {
+  return (
+    <div className={`flex items-center justify-between gap-3 text-xs text-gray-400 ${compact ? "px-0 pt-2" : "px-6 py-4 border-t border-gray-100"}`}>
+      <span>Menampilkan {currentPage === 1 ? "1-4" : "5-8"} dari 128 booking</span>
+      <div className="flex items-center gap-1.5">
+        <button type="button" disabled={currentPage === 1} onClick={() => onPageChange(1)} className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-400 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer" aria-label="Sebelumnya">
+          <ChevronLeft className="w-3.5 h-3.5" />
+        </button>
+        {[1, 2].map((p) => (
+          <button key={p} type="button" onClick={() => onPageChange(p)} className={`w-7 h-7 flex items-center justify-center rounded-md font-semibold transition-colors cursor-pointer ${currentPage === p ? "bg-[#1b4332] text-white" : "border border-gray-200 text-gray-700 hover:bg-gray-50"}`}>{p}</button>
+        ))}
+        <button type="button" disabled={currentPage === 2} onClick={() => onPageChange(2)} className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-400 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer" aria-label="Selanjutnya">
+          <ChevronRight className="w-3.5 h-3.5" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminBookingPage() {
-  const [bookings, setBookings] = useState<BookingItem[]>(INITIAL_BOOKINGS);
+  const [bookings, setBookings] = useState<BookingItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("camprent_admin_bookings");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    return INITIAL_BOOKINGS;
+  });
   const [selectedStatus, setSelectedStatus] = useState<string>("Semua");
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [selectedBooking, setSelectedBooking] = useState<BookingItem | null>(null);
   const [rejectingBooking, setRejectingBooking] = useState<BookingItem | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("camprent_admin_bookings");
-      if (saved) {
-        try { setBookings(JSON.parse(saved)); } catch { /* ignore */ }
-      }
-    }
-  }, []);
 
   const saveBookings = (nb: BookingItem[]) => {
     setBookings(nb);
@@ -92,23 +120,6 @@ export default function AdminBookingPage() {
 
   const getPaymentBadge = (p: BookingItem["pembayaran"]) =>
     p === "Lunas" ? "bg-[#e6f4ea] text-[#1b7a37]" : "bg-[#fff1e8] text-[#c2410c]";
-
-  const PaginationBar = ({ compact = false }: { compact?: boolean }) => (
-    <div className={`flex items-center justify-between gap-3 text-xs text-gray-400 ${compact ? "px-0 pt-2" : "px-6 py-4 border-t border-gray-100"}`}>
-      <span>Menampilkan {currentPage === 1 ? "1-4" : "5-8"} dari 128 booking</span>
-      <div className="flex items-center gap-1.5">
-        <button type="button" disabled={currentPage === 1} onClick={() => setCurrentPage(1)} className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-400 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer" aria-label="Sebelumnya">
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </button>
-        {[1, 2].map((p) => (
-          <button key={p} type="button" onClick={() => setCurrentPage(p)} className={`w-7 h-7 flex items-center justify-center rounded-md font-semibold transition-colors cursor-pointer ${currentPage === p ? "bg-[#1b4332] text-white" : "border border-gray-200 text-gray-700 hover:bg-gray-50"}`}>{p}</button>
-        ))}
-        <button type="button" disabled={currentPage === 2} onClick={() => setCurrentPage(2)} className="w-7 h-7 flex items-center justify-center border border-gray-200 rounded-md text-gray-400 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors cursor-pointer" aria-label="Selanjutnya">
-          <ChevronRight className="w-3.5 h-3.5" />
-        </button>
-      </div>
-    </div>
-  );
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-7xl mx-auto pb-10">
@@ -177,7 +188,7 @@ export default function AdminBookingPage() {
           ))
         )}
         <div className="bg-white rounded-2xl border border-gray-200/90 px-4 py-3 shadow-2xs">
-          <PaginationBar compact />
+          <PaginationBar currentPage={currentPage} onPageChange={setCurrentPage} compact />
         </div>
       </div>
 
@@ -230,7 +241,7 @@ export default function AdminBookingPage() {
             </tbody>
           </table>
         </div>
-        <PaginationBar />
+        <PaginationBar currentPage={currentPage} onPageChange={setCurrentPage} />
       </div>
 
       {/* DETAIL MODAL */}

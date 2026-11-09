@@ -1,19 +1,30 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Plus,
   X,
   CheckCircle,
   AlertCircle,
-  Shield,
   Mail,
   User,
 } from "lucide-react";
 import { INITIAL_USERS, UserItem } from "@/data/adminData";
 
 export default function AdminPenggunaPage() {
-  const [users, setUsers] = useState<UserItem[]>(INITIAL_USERS);
+  const [users, setUsers] = useState<UserItem[]>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("camprent_admin_users");
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch {
+          // ignore error
+        }
+      }
+    }
+    return INITIAL_USERS;
+  });
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Modals state
@@ -27,20 +38,6 @@ export default function AdminPenggunaPage() {
   const [newUserEmail, setNewUserEmail] = useState("");
   const [newUserRole, setNewUserRole] = useState<UserItem["role"]>("Customer");
   const [newUserStatus, setNewUserStatus] = useState<UserItem["status"]>("Aktif");
-
-  // Load from localStorage if available
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("camprent_admin_users");
-      if (saved) {
-        try {
-          setUsers(JSON.parse(saved));
-        } catch {
-          // ignore error
-        }
-      }
-    }
-  }, []);
 
   const saveUsers = (newUsers: UserItem[]) => {
     setUsers(newUsers);

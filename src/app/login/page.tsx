@@ -1,13 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Eye, AlertCircle, LogIn } from "lucide-react";
+import { setGuestUser } from "@/data/auth";
 
 type AuthTab = "login" | "register";
 type ToastType = "success" | "error" | null;
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const reason = searchParams.get("reason");
+
   const [tab, setTab] = useState<AuthTab>("login");
 
   // Form states
@@ -16,7 +21,7 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  // Toast notification state (matches provided design)
+  // Toast notification state
   const [toast, setToast] = useState<{
     type: ToastType;
     message: string;
@@ -116,6 +121,19 @@ export default function LoginPage() {
     }, 1200);
   };
 
+  // Handler for Guest login (look-around only)
+  const handleGuestLogin = () => {
+    setIsLoading(true);
+    setToast(null);
+
+    setGuestUser();
+    showToast("success", "Masuk sebagai Tamu. Mengalihkan ke katalog...");
+
+    setTimeout(() => {
+      router.push("/customer/katalog");
+    }, 1000);
+  };
+
   return (
     <div className="flex flex-col lg:flex-row min-h-screen bg-white">
       {/* ================= LEFT SIDE (DESKTOP) ================= */}
@@ -142,7 +160,7 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* ================= MOBILE HEADER (matches iPhone 17 mockup) ================= */}
+      {/* ================= MOBILE HEADER ================= */}
       <div className="lg:hidden bg-[#26533c] text-white p-6 pt-10 rounded-b-3xl select-none">
         <div className="text-2xl font-bold tracking-tight mb-5">
           Camp<span className="text-[#f97316]">Rent</span>
@@ -155,7 +173,7 @@ export default function LoginPage() {
 
       {/* ================= RIGHT SIDE / FORM CONTAINER ================= */}
       <div className="flex-1 flex flex-col justify-center items-center p-4 sm:p-8 bg-[#f9fafb] lg:bg-white relative min-h-[500px]">
-        {/* Toast Notifications (matches exact design in the prompt) */}
+        {/* Toast Notifications */}
         <div className="w-full max-w-md lg:absolute lg:top-8 lg:right-8 lg:max-w-xs space-y-2.5 z-30 mb-4 lg:mb-0">
           {toast?.type === "success" && (
             <div
@@ -178,6 +196,31 @@ export default function LoginPage() {
 
         {/* Login Card */}
         <div className="w-full max-w-md bg-white rounded-2xl shadow-[0_4px_25px_rgba(0,0,0,0.06)] border border-gray-100 p-6 sm:p-8 transition-all">
+          {/* Reason Alert: when redirected from guest rent attempt */}
+          {reason === "guest_sewa" && (
+            <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-amber-900 text-xs flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong className="font-semibold block text-amber-950">
+                  Login Diperlukan untuk Menyewa
+                </strong>
+                Anda sedang masuk sebagai <span className="font-semibold">Tamu</span>. Silakan login akun Anda atau daftar baru untuk menyewa alat camping.
+              </div>
+            </div>
+          )}
+
+          {reason === "guest_auth" && (
+            <div className="mb-5 p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-xs flex items-start gap-2.5 animate-in fade-in slide-in-from-top-2">
+              <AlertCircle className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong className="font-semibold block text-blue-950">
+                  Akses Khusus Akun Terdaftar
+                </strong>
+                Fitur riwayat dan status booking hanya dapat diakses dengan akun terdaftar. Silakan login akun Anda.
+              </div>
+            </div>
+          )}
+
           {/* Tabs: Masuk / Daftar */}
           <div className="flex bg-[#f3f4f6] p-1.5 rounded-xl mb-6">
             <button
@@ -287,18 +330,41 @@ export default function LoginPage() {
               type="submit"
               id="btn-submit"
               disabled={isLoading}
-              className="w-full mt-2 bg-[#276738] hover:bg-[#1e542d] active:bg-[#184524] text-white font-medium py-3 rounded-lg text-sm transition-colors cursor-pointer disabled:opacity-70"
+              className="w-full mt-2 bg-[#276738] hover:bg-[#1e542d] active:bg-[#184524] text-white font-medium py-3 rounded-lg text-sm transition-colors cursor-pointer disabled:opacity-70 flex items-center justify-center gap-2"
             >
-              {isLoading
-                ? "Memproses..."
-                : tab === "login"
-                ? "Masuk"
-                : "Daftar"}
+              <LogIn className="w-4 h-4" />
+              <span>
+                {isLoading
+                  ? "Memproses..."
+                  : tab === "login"
+                  ? "Masuk"
+                  : "Daftar"}
+              </span>
             </button>
           </form>
 
+          {/* Guest / Tamu Login Option */}
+          <div className="relative my-5 flex items-center justify-center">
+            <div className="border-t border-gray-200 w-full" />
+            <span className="bg-white px-3 text-xs text-gray-400 font-medium">atau</span>
+          </div>
+
+          <button
+            type="button"
+            id="btn-guest-login"
+            onClick={handleGuestLogin}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg border border-[#26533c]/30 hover:border-[#26533c] hover:bg-[#26533c]/5 active:bg-[#26533c]/10 text-[#26533c] font-semibold text-xs sm:text-sm transition-all cursor-pointer disabled:opacity-60 shadow-xs group"
+          >
+            <Eye className="w-4 h-4 text-[#26533c] group-hover:scale-110 transition-transform" />
+            <span>Masuk sebagai Tamu (Mode Lihat)</span>
+          </button>
+          <p className="text-[11px] text-gray-400 text-center mt-1.5">
+            Jelajahi dan lihat seluruh katalog alat tanpa perlu login akun
+          </p>
+
           {/* Bottom Switcher */}
-          <div className="mt-6 text-center text-xs text-gray-600">
+          <div className="mt-5 text-center text-xs text-gray-600">
             {tab === "login" ? (
               <span>
                 Belum punya akun?{" "}
@@ -331,7 +397,7 @@ export default function LoginPage() {
           </div>
 
           {/* Quick Demo Helper Hint */}
-          <div className="mt-8 pt-4 border-t border-gray-100 text-[11px] text-gray-400 space-y-1">
+          <div className="mt-7 pt-4 border-t border-gray-100 text-[11px] text-gray-400 space-y-1">
             <div className="font-medium text-gray-500">Kredensial Demo:</div>
             <div className="flex flex-wrap gap-x-3 gap-y-1">
               <button
@@ -364,10 +430,31 @@ export default function LoginPage() {
               >
                 • Customer: customer@gmail.com / password123
               </button>
+              <button
+                type="button"
+                onClick={handleGuestLogin}
+                className="text-[#f97316] font-semibold hover:underline cursor-pointer"
+              >
+                • Tamu: Masuk tanpa akun (Hanya Lihat)
+              </button>
             </div>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-white text-sm text-gray-500">
+          Memuat halaman login...
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }
