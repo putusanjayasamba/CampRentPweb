@@ -163,10 +163,10 @@ export default function Sidebar({
           Camp<span className="text-[#f97316]">Rent</span>
         </Link>
 
-        {/* Page title or role pill */}
-        <span className="text-[11px] font-semibold bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-full border border-emerald-100">
-          {pageTitle || roleLabel}
-        </span>
+        {/* Avatar */}
+        <div className="w-8 h-8 rounded-full bg-[#e07a2c] text-white text-xs font-bold flex items-center justify-center shadow-xs">
+          IB
+        </div>
       </div>
 
       {/* ── MOBILE DRAWER ── */}

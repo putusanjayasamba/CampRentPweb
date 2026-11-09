@@ -32,7 +32,7 @@ export default function StaffLayout({
   const getPageTitle = () => {
     if (pathname.startsWith("/staff/antrean")) return "Antrean Hari Ini";
     if (pathname.startsWith("/staff/riwayat")) return "Riwayat Pengecekan";
-    return "Panel Operasional";
+    return "Panel Staff";
   };
 
   return (
@@ -46,12 +46,13 @@ export default function StaffLayout({
         items={staffNavItems}
         roleLabel="Login sebagai Staff"
         theme="staff"
+        pageTitle={getPageTitle()}
       />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen min-w-0">
-        {/* Top Header */}
-        <header className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shrink-0">
+        {/* Top Header — desktop only */}
+        <header className="hidden lg:flex bg-white border-b border-gray-200 px-8 py-4 items-center justify-between shrink-0">
           <h1 className="font-semibold text-gray-800 text-sm">
             {getPageTitle()}
           </h1>
@@ -65,7 +66,7 @@ export default function StaffLayout({
         </header>
 
         {/* Content Body */}
-        <main className="flex-1 overflow-auto p-8">{children}</main>
+        <main className="flex-1 overflow-auto p-8 pt-20 lg:pt-8">{children}</main>
       </div>
     </div>
   );
