@@ -20,6 +20,7 @@ function LoginContent() {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<"customer" | "admin" | "staff">("customer");
 
   // Toast notification state
   const [toast, setToast] = useState<{
@@ -36,7 +37,7 @@ function LoginContent() {
     }, 4500);
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setToast(null);
@@ -44,55 +45,93 @@ function LoginContent() {
     const trimmedEmail = email.trim().toLowerCase();
     const trimmedPassword = password.trim();
 
-    setTimeout(() => {
-      setIsLoading(false);
+    if (tab === "login") {
+      try {
+        const res = await fetch("http://localhost:5000/api/v1/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: trimmedEmail,
+            password: trimmedPassword,
+          }),
+        });
 
-      if (tab === "login") {
-        // 1. Admin authentication rule
-        if (trimmedEmail === "admin@gmail.com") {
-          if (trimmedPassword === "admin123") {
-            handleSuccessAuth("admin", "Admin CampRent");
-          } else {
-            showToast("error", "Email atau password salah. Coba lagi.");
-          }
-          return;
-        }
+        const data = await res.json();
 
-        // 2. Staff authentication rule
-        if (trimmedEmail === "staff@gmail.com") {
-          if (trimmedPassword === "staff123" || trimmedPassword === "admin123") {
-            handleSuccessAuth("staff", "Staff Operasional");
-          } else {
-            showToast("error", "Email atau password salah. Coba lagi.");
-          }
+        if (!res.ok) {
+          setIsLoading(false);
+          showToast("error", data.message || "Email atau password salah. Coba lagi.");
           return;
         }
 
-        // 3. Customer authentication rule
-        // Customer email can be any valid email, password minimum 6 chars
-        if (trimmedEmail.includes("@") && trimmedPassword.length >= 6) {
-          handleSuccessAuth("customer", trimmedEmail.split("@")[0]);
-        } else {
-          showToast("error", "Email atau password salah. Coba lagi.");
-        }
-      } else {
-        // Register Tab logic
-        if (!name.trim()) {
-          showToast("error", "Silakan masukkan nama lengkap.");
-          return;
-        }
-        if (trimmedPassword.length < 6) {
-          showToast("error", "Password minimal 6 karakter.");
-          return;
-        }
-        if (trimmedPassword !== confirmPassword.trim()) {
-          showToast("error", "Konfirmasi password tidak cocok.");
-          return;
+        // Simpan token JWT untuk request yang terautentikasi
+        if (typeof window !== "undefined" && data.token) {
+          localStorage.setItem("camprent_token", data.token);
         }
 
-        handleSuccessAuth("customer", name);
+        handleSuccessAuth(data.user.role, data.user.name);
+      } catch {
+        setIsLoading(false);
+        showToast(
+          "error",
+          "Gagal terhubung ke backend (port 5000). Pastikan server backend berjalan."
+        );
       }
-    }, 600);
+    } else {
+      // Tab Registrasi Akun Baru
+      if (!name.trim()) {
+        setIsLoading(false);
+        showToast("error", "Silakan masukkan nama lengkap.");
+        return;
+      }
+      if (trimmedPassword.length < 6) {
+        setIsLoading(false);
+        showToast("error", "Password minimal 6 karakter.");
+        return;
+      }
+      if (trimmedPassword !== confirmPassword.trim()) {
+        setIsLoading(false);
+        showToast("error", "Konfirmasi password tidak cocok.");
+        return;
+      }
+
+      try {
+        const res = await fetch("http://localhost:5000/api/v1/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: name.trim(),
+            email: trimmedEmail,
+            password: trimmedPassword,
+            confirmPassword: confirmPassword.trim(),
+            role,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setIsLoading(false);
+          showToast("error", data.message || "Registrasi gagal.");
+          return;
+        }
+
+        setIsLoading(false);
+        showToast(
+          "success",
+          `Akun ${role} berhasil terdaftar di MongoDB! Silakan masuk dengan email dan password Anda.`
+        );
+        setTab("login");
+        setPassword("");
+        setConfirmPassword("");
+      } catch {
+        setIsLoading(false);
+        showToast(
+          "error",
+          "Gagal terhubung ke backend (port 5000). Pastikan server backend berjalan."
+        );
+      }
+    }
   };
 
   const handleSuccessAuth = (role: "customer" | "admin" | "staff", displayName: string) => {
@@ -325,6 +364,28 @@ function LoginContent() {
               </div>
             )}
 
+            {/* If Register tab: Pilihan Role */}
+            {tab === "register" && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                  Daftar Sebagai Peran (Role)
+                </label>
+                <select
+                  id="select-role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as "customer" | "admin" | "staff")}
+                  className="w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm text-gray-800 bg-white focus:outline-none focus:border-[#26533c] focus:ring-1 focus:ring-[#26533c] transition-colors"
+                >
+                  <option value="customer">Customer (Penyewa Alat)</option>
+                  <option value="admin">Admin (Pengelola)</option>
+                  <option value="staff">Staff (Operasional)</option>
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">
+                  *Peran akun ini tersimpan asli di database MongoDB dan dapat diubah langsung di MongoDB Compass.
+                </p>
+              </div>
+            )}
+
             {/* Submit Button */}
             <button
               type="submit"
@@ -396,48 +457,12 @@ function LoginContent() {
             )}
           </div>
 
-          {/* Quick Demo Helper Hint */}
+          {/* Info Status Database */}
           <div className="mt-7 pt-4 border-t border-gray-100 text-[11px] text-gray-400 space-y-1">
-            <div className="font-medium text-gray-500">Kredensial Demo:</div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail("admin@gmail.com");
-                  setPassword("admin123");
-                }}
-                className="text-[#276738] hover:underline cursor-pointer"
-              >
-                • Admin: admin@gmail.com / admin123
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail("staff@gmail.com");
-                  setPassword("staff123");
-                }}
-                className="text-[#276738] hover:underline cursor-pointer"
-              >
-                • Staff: staff@gmail.com / staff123
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setEmail("customer@gmail.com");
-                  setPassword("password123");
-                }}
-                className="text-[#276738] hover:underline cursor-pointer"
-              >
-                • Customer: customer@gmail.com / password123
-              </button>
-              <button
-                type="button"
-                onClick={handleGuestLogin}
-                className="text-[#f97316] font-semibold hover:underline cursor-pointer"
-              >
-                • Tamu: Masuk tanpa akun (Hanya Lihat)
-              </button>
-            </div>
+            <div className="font-medium text-gray-500">Database MongoDB (Live):</div>
+            <p className="text-gray-500 leading-relaxed">
+              Silakan buat akun baru di tab <span className="font-semibold text-[#f97316]">Daftar</span> dengan peran Customer, Admin, atau Staff. Akun akan langsung tersimpan di MongoDB dan dapat Anda lihat serta kelola di MongoDB Compass.
+            </p>
           </div>
         </div>
       </div>

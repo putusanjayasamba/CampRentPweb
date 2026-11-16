@@ -21,6 +21,9 @@ app.get("/", (req, res) => {
   res.json({ message: "CampRent API berjalan" });
 });
 
+// Route API v1
+app.use("/api/v1/auth", require("./routes/authRoutes"));
+
 // Koneksi ke MongoDB, jalankan server HANYA jika database berhasil terkoneksi
 mongoose
   .connect(process.env.MONGO_URI)
