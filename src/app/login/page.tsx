@@ -8,6 +8,8 @@ import { setGuestUser } from "@/data/auth";
 type AuthTab = "login" | "register";
 type ToastType = "success" | "error" | null;
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -47,7 +49,7 @@ function LoginContent() {
 
     if (tab === "login") {
       try {
-        const res = await fetch("http://localhost:5000/api/v1/auth/login", {
+        const res = await fetch(`${API_URL}/api/v1/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -74,7 +76,7 @@ function LoginContent() {
         setIsLoading(false);
         showToast(
           "error",
-          "Gagal terhubung ke backend (port 5000). Pastikan server backend berjalan."
+          "Gagal terhubung ke backend. Pastikan server backend berjalan."
         );
       }
     } else {
@@ -96,7 +98,7 @@ function LoginContent() {
       }
 
       try {
-        const res = await fetch("http://localhost:5000/api/v1/auth/register", {
+        const res = await fetch(`${API_URL}/api/v1/auth/register`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
