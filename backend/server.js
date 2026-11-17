@@ -16,6 +16,27 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+// Fungsi koneksi ke MongoDB (mendukung server lokal & Vercel serverless)
+let isConnected = false;
+const connectDB = async () => {
+  if (isConnected || mongoose.connection.readyState >= 1) {
+    return;
+  }
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    isConnected = true;
+    console.log("Terhubung ke MongoDB");
+  } catch (err) {
+    console.error("Gagal terhubung ke MongoDB:", err.message);
+  }
+};
+
+// Middleware untuk memastikan koneksi database aktif pada setiap request serverless
+app.use(async (req, res, next) => {
+  await connectDB();
+  next();
+});
+
 // Route root untuk health check
 app.get("/", (req, res) => {
   res.json({ message: "CampRent API berjalan" });
@@ -24,17 +45,15 @@ app.get("/", (req, res) => {
 // Route API v1
 app.use("/api/v1/auth", require("./routes/authRoutes"));
 
-// Koneksi ke MongoDB, jalankan server HANYA jika database berhasil terkoneksi
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log("Terhubung ke MongoDB");
+// Jalankan server HANYA jika dijalankan secara lokal (bukan di lingkungan serverless Vercel)
+if (!process.env.VERCEL) {
+  connectDB().then(() => {
     app.listen(PORT, () => {
       console.log(`Server berjalan di port ${PORT}`);
     });
-  })
-  .catch((err) => {
-    console.error("Gagal terhubung ke MongoDB:", err.message);
-    process.exit(1);
   });
+}
+
+// Ekspor app agar dapat dieksekusi oleh Vercel Serverless Function
+module.exports = app;
 
