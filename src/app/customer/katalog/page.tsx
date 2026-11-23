@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, Suspense } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { X, CheckCircle2, SlidersHorizontal, LogIn } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
@@ -12,6 +12,41 @@ import {
   getStoredBookings,
   saveStoredBookings,
 } from "@/data/customerData";
+
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000").replace(/\/$/, "");
+
+function getCategorySlug(cat: string): "tenda" | "sleeping" | "cooking" | "lighting" | "carrier" {
+  const lower = (cat || "").toLowerCase();
+  if (lower.includes("tenda")) return "tenda";
+  if (lower.includes("sleep")) return "sleeping";
+  if (lower.includes("cook")) return "cooking";
+  if (lower.includes("light")) return "lighting";
+  return "carrier";
+}
+
+function getBgPastel(cat: string): string {
+  const slug = getCategorySlug(cat);
+  switch (slug) {
+    case "tenda": return "bg-[#9dc4b1]";
+    case "sleeping": return "bg-[#ecd292]";
+    case "cooking": return "bg-[#f2a99b]";
+    case "lighting": return "bg-[#9fc3d9]";
+    case "carrier": return "bg-[#c9bfdb]";
+    default: return "bg-[#9dc4b1]";
+  }
+}
+
+function getType(cat: string): Product["type"] {
+  const slug = getCategorySlug(cat);
+  switch (slug) {
+    case "tenda": return "tent";
+    case "sleeping": return "sleeping";
+    case "cooking": return "stove";
+    case "lighting": return "light";
+    case "carrier": return "backpack";
+    default: return "tent";
+  }
+}
 
 function KatalogContent() {
   const router = useRouter();
@@ -46,7 +81,52 @@ function KatalogContent() {
   });
 
   // Products data
-  const [products] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchEquipment = async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/v1/equipment?limit=50`);
+        if (res.ok) {
+          const json = await res.json();
+          if (json.data && Array.isArray(json.data) && json.data.length > 0 && isMounted) {
+            interface ApiEquipmentItem {
+              _id: string;
+              name: string;
+              category: string;
+              pricePerDay: number;
+              stock: number;
+              image?: string;
+              specs?: { label: string; value: string }[];
+            }
+            const mapped: Product[] = json.data.map((item: ApiEquipmentItem) => ({
+              id: item._id,
+              codeId: item._id,
+              name: item.name,
+              category: getCategorySlug(item.category),
+              categoryLabel: item.category,
+              price: item.pricePerDay,
+              available: item.stock > 0,
+              stock: item.stock,
+              bgPastel: getBgPastel(item.category),
+              image: item.image || "/TendaDome4orang.jpg",
+              type: getType(item.category),
+              specs: item.specs || [],
+            }));
+            setProducts(mapped);
+          }
+        }
+      } catch {
+        // Fallback ke INITIAL_PRODUCTS jika backend offline
+      }
+    };
+
+    fetchEquipment();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Selected product for modal
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);

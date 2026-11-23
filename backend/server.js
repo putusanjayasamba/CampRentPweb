@@ -44,6 +44,7 @@ app.get("/", (req, res) => {
 
 // Route API v1
 app.use("/api/v1/auth", require("./routes/authRoutes"));
+app.use("/api/v1/equipment", require("./routes/equipmentRoutes"));
 
 // Jalankan server HANYA jika dijalankan secara lokal (bukan di lingkungan serverless Vercel)
 if (!process.env.VERCEL) {
